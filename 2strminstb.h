@@ -48,3 +48,6 @@ void energy();
 double update_phi_field(double rho_phi[]);
 double update_E_field(double phi_ef[]);
 double rng(double num);
+
+//Utility
+double read_timer();

@@ -109,8 +109,8 @@ The pseudo-flowchart is in the 'main' part.
 #include <libc.h>
 #include <sys/time.h>
 int main () {
-	
-	srand(time(0));
+	double seconds = read_timer();
+	//srand(time(0));
 	// ++++++++++++++++++++++++++++++++
 	// Inputs
 	v_th = 1; v_da = 5; v_db = -5;		// initial velocity, 'th' means 'thermal (random)', 'd' means 'drifting'
@@ -143,7 +143,8 @@ int main () {
 	file1 = fopen("v_th.txt", "w");
 	fprintf(file1,"%f\t%f\t%f\t%d\t%d",v_th,v_da,v_db,Lx,tt);
 	fclose(file1);
-	
+	double elapsed = read_timer() - seconds;
+	printf("elapsed time (serial): %lf\n", elapsed);
 	return EXIT_SUCCESS;	
 }
 
