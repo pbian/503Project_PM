@@ -107,15 +107,14 @@ The pseudo-flowchart is in the 'main' part.
 #include <math.h>
 #include "2strminstb.h"	// This is the header file
 #include <libc.h>
-#include <omp.h>
-
+#include <sys/time.h>
 int main () {
 	double seconds = read_timer();
 	//srand(time(0));
 	// ++++++++++++++++++++++++++++++++
 	// Inputs
 	v_th = 1; v_da = 5; v_db = -5;		// initial velocity, 'th' means 'thermal (random)', 'd' means 'drifting'
-	Lx = 32; dx = 1;			// domain length and grid size
+	dx = 1;			// domain length and grid size
 	delta2 = dx*dx;				// grid size squared
 	dt = .5/v_da;				// time step size
 	omega = .75;				// a factor in solving AX = B (SOR method)
@@ -145,7 +144,7 @@ int main () {
 	fprintf(file1,"%f\t%f\t%f\t%d\t%d",v_th,v_da,v_db,Lx,tt);
 	fclose(file1);
 	double elapsed = read_timer() - seconds;
-	printf("elapsed time (parallel): %lf seconds\n", elapsed);
+	printf("elapsed time (serial): %lf\n", elapsed);
 	return EXIT_SUCCESS;	
 }
 
@@ -164,7 +163,6 @@ double read_timer()
 
   return (end.tv_sec - start.tv_sec) + 1.0e-6 * (end.tv_usec - start.tv_usec);
 }
-
 
 void setup_domain() {
 	

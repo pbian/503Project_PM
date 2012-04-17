@@ -2,7 +2,7 @@
 
 
 // We use static arrays so no dynamic allocations
-#define NMAX 10000			// for a sufficiently large array
+#define NMAX 25000			// for a sufficiently large array
 #define mad 500				// for a small array
 #define ppc 310			// particles per cell
 #define tt 40				// total time steps
