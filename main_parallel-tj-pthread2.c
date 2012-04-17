@@ -109,7 +109,7 @@ The pseudo-flowchart is in the 'main' part.
 #include <libc.h>
 #include <omp.h>
 #include <pthread.h>
-#define NUM_THREADS 20
+#define NUM_THREADS 8
 pthread_mutex_t mutexcharge = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexefield;
 struct thread_data {
@@ -125,7 +125,7 @@ int main () {
 	// ++++++++++++++++++++++++++++++++
 	// Inputs
 	v_th = 1; v_da = 5; v_db = -5;		// initial velocity, 'th' means 'thermal (random)', 'd' means 'drifting'
-	Lx = 32; dx = 1;			// domain length and grid size
+	dx = 1;			// domain length and grid size
 	delta2 = dx*dx;				// grid size squared
 	dt = .5/v_da;				// time step size
 	omega = .75;				// a factor in solving AX = B (SOR method)

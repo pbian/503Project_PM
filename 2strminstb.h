@@ -4,10 +4,10 @@
 // We use static arrays so no dynamic allocations
 #define NMAX 10000			// for a sufficiently large array
 #define mad 500				// for a small array
-#define ppc 8				// particles per cell
+#define ppc 310			// particles per cell
 #define tt 40				// total time steps
-
-int Lx,dx;
+#define Lx 32
+int dx;
 int count;
 int Npart;
 double v_th,v_da,v_db;
@@ -15,7 +15,7 @@ double delta2;
 double omega;
 double dt;
 
-int Amatrix[NMAX][NMAX] = {0};
+int Amatrix[Lx][Lx] = {0};
 
 // Two populations, A and B
 // [tt] means tt time layers
@@ -48,6 +48,7 @@ void energy();
 double update_phi_field(double rho_phi[]);
 double update_E_field(double phi_ef[]);
 double rng(double num);
+void * periodic_move_parallel(void *thread_d);
 
 //Utility
 double read_timer();
