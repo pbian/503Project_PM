@@ -132,8 +132,8 @@ int main () {
 	// Update the particle velocity/position
 	// %%%%%%%%%%%%% This is the part we need to parallelize %%%%%%%%%%%%%%%%%
     double seconds = read_timer();
-    periodic_move_node();
-	double elapsed = read_timer() - seconds;
+	periodic_move_node();
+    double elapsed = read_timer() - seconds;
 	// Output checkpoint data for post-processing
 	output();
 	vel_temp();	// velocity and temperature (temperature is related to random velocities)
@@ -305,68 +305,73 @@ void periodic_move_node() {
 	double Area1 = 0, Area2 = 0, Area3 = 0, Area4 = 0;
 	double pcn = .5/(double)ppc;
 	double rho[Lx+1],pef[Lx+1];
-	
+    omp_set_num_threads(20);
 	for (ii=1; ii<tt; ii++) {// For each time step - we can't parallelize the time-serial work...
 
-
-
-		// ===============================================
-		for (kk=0; kk<Npart; kk++) { // @@@@@@@@@@@@@@@@@ Note the starting and ending index, 0 --> Npart, parallelize this
-		//	Electron Population A
-			xposa = Part_Matrix_A[ii-1][kk][1];
-			v_xa = Part_Matrix_A[ii-1][kk][4];
-			v_ya = Part_Matrix_A[ii-1][kk][5];
-			v_za = Part_Matrix_A[ii-1][kk][6];
+    #pragma omp parallel default(shared) private(xposa,xposb,xposnewa,xposnewb,v_xa,v_xnewa,v_xb,v_xnewb,v_ya,v_za,v_yb,v_zb, ef_inta, ef_intb, i, j, kk, m, n)
+        {
+            int my_id = omp_get_thread_num();
+            int num_threads = omp_get_num_threads();
+            int my_num_elements = (Npart)/num_threads;
+            int my_first_element = my_id*((Npart)/num_threads);
+            if (my_id == (num_threads - 1)) {
+                my_num_elements += Npart - num_threads*(Npart/num_threads);
+            } 
+            // ===============================================
+            for (kk=my_first_element; kk<my_first_element + my_num_elements; kk++) { // @@@@@@@@@@@@@@@@@ Note the starting and ending index, 0 --> Npart, parallelize this
+            //	Electron Population A
+                xposa = Part_Matrix_A[ii-1][kk][1];
+                v_xa = Part_Matrix_A[ii-1][kk][4];
+                v_ya = Part_Matrix_A[ii-1][kk][5];
+                v_za = Part_Matrix_A[ii-1][kk][6];
 			
-		//	Move Particles
-			i = floor(xposa); m = ceil(xposa);
-			ef_inta = (efield[ii-1][m] - efield[ii-1][i])*(xposa - i)*ddx + efield[ii-1][i];
-			v_xnewa = v_xa - ef_inta*dt;
-			xposnewa = xposa + v_xnewa*dt;
+            //	Move Particles
+                i = floor(xposa); m = ceil(xposa);
+                ef_inta = (efield[ii-1][m] - efield[ii-1][i])*(xposa - i)*ddx + efield[ii-1][i];
+                v_xnewa = v_xa - ef_inta*dt;
+                xposnewa = xposa + v_xnewa*dt;
 			
-		//	Update Particle Positions and Velocities
-			Part_Matrix_A[ii][kk][0] = Part_Matrix_A[ii-1][kk][0];
-			Part_Matrix_A[ii][kk][1] = xposnewa;
-			Part_Matrix_A[ii][kk][4] = v_xnewa;
-			Part_Matrix_A[ii][kk][5] = v_ya;
-			Part_Matrix_A[ii][kk][6] = v_za;
+            //	Update Particle Positions and Velocities
+                Part_Matrix_A[ii][kk][0] = Part_Matrix_A[ii-1][kk][0];
+                Part_Matrix_A[ii][kk][1] = xposnewa;
+                Part_Matrix_A[ii][kk][4] = v_xnewa;
+                Part_Matrix_A[ii][kk][5] = v_ya;
+                Part_Matrix_A[ii][kk][6] = v_za;
 			
-		//	Periodic Particle Position
-			if (Part_Matrix_A[ii][kk][1] < 0) {
-				Part_Matrix_A[ii][kk][1] = Part_Matrix_A[ii][kk][1] + Lx;}
-			if (Part_Matrix_A[ii][kk][1] > Lx) {
-				Part_Matrix_A[ii][kk][1] = Part_Matrix_A[ii][kk][1] - Lx;}
+            //	Periodic Particle Position
+                if (Part_Matrix_A[ii][kk][1] < 0) {
+                    Part_Matrix_A[ii][kk][1] = Part_Matrix_A[ii][kk][1] + Lx;}
+                if (Part_Matrix_A[ii][kk][1] > Lx) {
+                    Part_Matrix_A[ii][kk][1] = Part_Matrix_A[ii][kk][1] - Lx;}
 		
-		//	Electron Population B
-			xposb = Part_Matrix_B[ii-1][kk][1];
-			v_xb = Part_Matrix_B[ii-1][kk][4];
-			v_yb = Part_Matrix_B[ii-1][kk][5];
-			v_zb = Part_Matrix_B[ii-1][kk][6];
+            //	Electron Population B
+                xposb = Part_Matrix_B[ii-1][kk][1];
+                v_xb = Part_Matrix_B[ii-1][kk][4];
+                v_yb = Part_Matrix_B[ii-1][kk][5];
+                v_zb = Part_Matrix_B[ii-1][kk][6];
 			
-		//	Move Particles
-			j = floor(xposb); n = ceil(xposb);
-			ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
-			v_xnewb = v_xb - ef_intb*dt;
-			xposnewb = xposb + v_xnewb*dt;
+            //	Move Particles
+                j = floor(xposb); n = ceil(xposb);
+                ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+                v_xnewb = v_xb - ef_intb*dt;
+                xposnewb = xposb + v_xnewb*dt;
 			
-		//	Update Particle Positions and Velocities
-			Part_Matrix_B[ii][kk][0] = Part_Matrix_B[ii-1][kk][0];
-			Part_Matrix_B[ii][kk][1] = xposnewb;
-			Part_Matrix_B[ii][kk][4] = v_xnewb;
-			Part_Matrix_B[ii][kk][5] = v_yb;
-			Part_Matrix_B[ii][kk][6] = v_zb;
+            //	Update Particle Positions and Velocities
+                Part_Matrix_B[ii][kk][0] = Part_Matrix_B[ii-1][kk][0];
+                Part_Matrix_B[ii][kk][1] = xposnewb;
+                Part_Matrix_B[ii][kk][4] = v_xnewb;
+                Part_Matrix_B[ii][kk][5] = v_yb;
+                Part_Matrix_B[ii][kk][6] = v_zb;
 			
-		//	Periodic Particle Position
-			if (Part_Matrix_B[ii][kk][1] < 0) {
-				Part_Matrix_B[ii][kk][1] = Part_Matrix_B[ii][kk][1] + Lx;}
-			if (Part_Matrix_B[ii][kk][1] > Lx) {
-				Part_Matrix_B[ii][kk][1] = Part_Matrix_B[ii][kk][1] - Lx;}
-		}
-		// Parallelize the bounded part, kk = 0 --> Npart
-		// ===============================================
-
-
-
+            //	Periodic Particle Position
+                if (Part_Matrix_B[ii][kk][1] < 0) {
+                    Part_Matrix_B[ii][kk][1] = Part_Matrix_B[ii][kk][1] + Lx;}
+                if (Part_Matrix_B[ii][kk][1] > Lx) {
+                    Part_Matrix_B[ii][kk][1] = Part_Matrix_B[ii][kk][1] - Lx;}
+            }
+            // Parallelize the bounded part, kk = 0 --> Npart
+            // ===============================================
+        }
 		
 		//	Update Node Charge
 		for (kk=0; kk<Npart; kk++) {
@@ -423,12 +428,12 @@ double update_phi_field(double rho_phi[]) {
 		Bmatrix[i] = -delta2*rho_phi[i];}
 	
 	//	Implement SOR Solution for Phi
-	double phi_new[Lx] = {0}, phi_old[Lx] = {0}, Matrix_Product[Lx] = {0};
-	double tol = 1e-6; double resid[Lx] = {0}, resid_norm = 1;
+	double phi_new[NMAX] = {0}, phi_old[NMAX] = {0}, Matrix_Product[NMAX] = {0};
+	double tol = 1e-6; double resid[NMAX] = {0}, resid_norm = 1;
 	
 	int k,l; double sum_mp, sum_norm;
 	int counter = 0;
-	while (resid_norm > tol && counter < 1000) {
+	while (resid_norm > tol && counter< 1000) {
 		for (k=0; k<Lx; k++) {phi_old[k] = phi_new[k];}
 		for (k=0; k<Lx; k++) {
 			sum_mp = 0; sum_norm = 0;

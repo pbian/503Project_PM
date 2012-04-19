@@ -125,7 +125,7 @@ int main () {
 	// ++++++++++++++++++++++++++++++++
 	// Inputs
 	v_th = 1; v_da = 5; v_db = -5;		// initial velocity, 'th' means 'thermal (random)', 'd' means 'drifting'
-	Lx = 32; dx = 1;			// domain length and grid size
+        dx = 1;			// domain length and grid size
 	delta2 = dx*dx;				// grid size squared
 	dt = .5/v_da;				// time step size
 	omega = .75;				// a factor in solving AX = B (SOR method)
@@ -472,7 +472,7 @@ double update_phi_field(double rho_phi[]) {
 	
 	int k,l; double sum_mp, sum_norm;
 	int counter = 0;
-	while (resid_norm > tol) {
+	while (resid_norm > tol && counter < 1000) {
 		for (k=0; k<Lx; k++) {phi_old[k] = phi_new[k];}
 		for (k=0; k<Lx; k++) {
 			sum_mp = 0; sum_norm = 0;

@@ -109,7 +109,7 @@ The pseudo-flowchart is in the 'main' part.
 #include <libc.h>
 #include <omp.h>
 #include <pthread.h>
-#define NUM_THREADS 8
+#define NUM_THREADS 20
 pthread_mutex_t mutexcharge = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexefield;
 struct thread_data {
@@ -289,12 +289,10 @@ void nodecharge_efield() {
 		rho[ic] = normdiff[0][ic];}
 	
 	printf("\nTimestep:\t%4d\n",0);
-	
 	update_phi_field(rho);
 	for (ef=0; ef<Lx; ef++) {
 		phi[0][ef] = rho[ef];
 		pef[ef] = phi[0][ef];}
-	
 	update_E_field(pef);
 	for (ef=0; ef<Lx; ef++) {
 		efield[0][ef] = pef[ef];}
@@ -331,7 +329,7 @@ void periodic_move_node() {
             thread_d->numElements = Npart/NUM_THREADS;
             thread_d->currentii = ii;
             if (o == NUM_THREADS - 1) {
-                thread_d->numElements += Npart - NUM_THREADS*Npart/NUM_THREADS;
+                thread_d->numElements += Npart - NUM_THREADS*(Npart/NUM_THREADS);
             }
             int rc = pthread_create(&threads[o], &attr, periodic_move_parallel, (void *)thread_d);
             if (rc) {
@@ -369,13 +367,11 @@ void periodic_move_node() {
 		}
 		
 		if (ii==.2*tt-1||ii ==.4*tt-1||ii ==.6*tt-1||ii==.8*tt-1||ii==tt-1) {printf("Timestep:\t%4d\n",ii + 1);}
-		
 		update_phi_field(rho);
 		for (ef=0; ef<Lx; ef++) {
 			phi[ii][ef] = rho[ef];
 			pef[ef] = phi[ii][ef];
 		}
-		
 		update_E_field(pef);
 		for (ef=0; ef<Lx; ef++) {
 			efield[ii][ef] = pef[ef];
@@ -463,12 +459,12 @@ double update_phi_field(double rho_phi[]) {
 		Bmatrix[i] = -delta2*rho_phi[i];}
 	
 	//	Implement SOR Solution for Phi
-	double phi_new[NMAX] = {0}, phi_old[NMAX] = {0}, Matrix_Product[NMAX] = {0};
-	double tol = 1e-6; double resid[NMAX] = {0}, resid_norm = 1;
+	double phi_new[Lx] = {0}, phi_old[Lx] = {0}, Matrix_Product[Lx] = {0};
+	double tol = 1e-6; double resid[Lx] = {0}, resid_norm = 1;
 	
 	int k,l; double sum_mp, sum_norm;
 	int counter = 0;
-	while (resid_norm > tol) {
+	while (resid_norm > tol && counter < 1000) {
 		for (k=0; k<Lx; k++) {phi_old[k] = phi_new[k];}
 		for (k=0; k<Lx; k++) {
 			sum_mp = 0; sum_norm = 0;
