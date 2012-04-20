@@ -108,6 +108,9 @@ The pseudo-flowchart is in the 'main' part.
 #include "2strminstb.h"	// This is the header file
 #include <libc.h>
 #include <sys/time.h>
+#include <pthread.h>
+
+
 int main () {
 	double seconds = read_timer();
 	//srand(time(0));
@@ -144,7 +147,7 @@ int main () {
 	fprintf(file1,"%f\t%f\t%f\t%d\t%d",v_th,v_da,v_db,Lx,tt);
 	fclose(file1);
 	double elapsed = read_timer() - seconds;
-	printf("elapsed time (serial): %lf\n", elapsed);
+	printf("elapsed time (parallel): %lf\n", elapsed);
 	return EXIT_SUCCESS;	
 }
 
@@ -416,6 +419,55 @@ void periodic_move_node() {
 	
 }
 
+/*void *threadedEField(void *thread)
+{
+    int threadNum;
+    threadNum = *((int *) thread);
+    int start = threadNum *size;
+    int end = MIN((threadNum+1)* size, Lx);
+    int i;
+    double ddx = 1/dx;
+    for (i = start; i < end-7;i+=8){
+        if (i == 0) 
+        {
+            eff[i] = .5*ddx*(phi_ef[Lx-1] - phi_ef[1]);
+            eff[i+1] = .5*ddx*(phi_ef[i] - phi_ef[i+2]);
+            eff[i+2] = .5*ddx*(phi_ef[i+1] - phi_ef[i+3]);
+            eff[i+3] = .5*ddx*(phi_ef[i+2] - phi_ef[i+4]);
+            eff[i+4] = .5*ddx*(phi_ef[i+3] - phi_ef[i+5]);
+            eff[i+5] = .5*ddx*(phi_ef[i+4] - phi_ef[i+6]);
+            eff[i+6] = .5*ddx*(phi_ef[i+5] - phi_ef[i+7]);
+            eff[i+7] = .5*ddx*(phi_ef[i+6] - phi_ef[i+8]);
+        }
+        else 
+        {
+            eff[i] = .5*ddx*(phi_ef[i-1] - phi_ef[i+1]);
+            eff[i+1] = .5*ddx*(phi_ef[i] - phi_ef[i+2]);
+            eff[i+2] = .5*ddx*(phi_ef[i+1] - phi_ef[i+3]);
+            eff[i+3] = .5*ddx*(phi_ef[i+2] - phi_ef[i+4]);
+            eff[i+4] = .5*ddx*(phi_ef[i+3] - phi_ef[i+5]);
+            eff[i+5] = .5*ddx*(phi_ef[i+4] - phi_ef[i+6]);
+            eff[i+6] = .5*ddx*(phi_ef[i+5] - phi_ef[i+7]);
+            eff[i+7] = .5*ddx*(phi_ef[i+6] - phi_ef[i+8]);
+        }
+    }
+    for(;i<end;i++)
+    {
+        if (i == Lx-1) 
+        {
+            eff[i] = .5*ddx*(phi_ef[Lx-2] - phi_ef[0]);
+        }
+        else 
+        {
+            eff[i] = .5*ddx*(phi_ef[i-1] - phi_ef[i+1]);
+        }
+    }
+    
+    return NULL;
+}
+*/
+
+
 double update_phi_field(double rho_phi[]) {
 	
 	//	Construct B Matrix
@@ -450,17 +502,93 @@ double update_phi_field(double rho_phi[]) {
 	return(1);
 }
 
-double update_E_field(double phi_ef[]) {
+//#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+double eff[Lx+1];
+double *phi_ef;
+int size;
 
+void *threadedEField(void *thread)
+{
+    int threadNum;
+    threadNum = *((int *) thread);
+    int start = threadNum *size;
+    int end = MIN((threadNum+1)* size, Lx);
+    int i;
+    double ddx = 1/dx;
+    for (i = start; i < end-7;i+=8){
+            if (i == 0) 
+            {
+                eff[i] = .5*ddx*(phi_ef[Lx-1] - phi_ef[1]);
+                eff[i+1] = .5*ddx*(phi_ef[i] - phi_ef[i+2]);
+                eff[i+2] = .5*ddx*(phi_ef[i+1] - phi_ef[i+3]);
+                eff[i+3] = .5*ddx*(phi_ef[i+2] - phi_ef[i+4]);
+                eff[i+4] = .5*ddx*(phi_ef[i+3] - phi_ef[i+5]);
+                eff[i+5] = .5*ddx*(phi_ef[i+4] - phi_ef[i+6]);
+                eff[i+6] = .5*ddx*(phi_ef[i+5] - phi_ef[i+7]);
+                eff[i+7] = .5*ddx*(phi_ef[i+6] - phi_ef[i+8]);
+            }
+            else 
+            {
+                eff[i] = .5*ddx*(phi_ef[i-1] - phi_ef[i+1]);
+                eff[i+1] = .5*ddx*(phi_ef[i] - phi_ef[i+2]);
+                eff[i+2] = .5*ddx*(phi_ef[i+1] - phi_ef[i+3]);
+                eff[i+3] = .5*ddx*(phi_ef[i+2] - phi_ef[i+4]);
+                eff[i+4] = .5*ddx*(phi_ef[i+3] - phi_ef[i+5]);
+                eff[i+5] = .5*ddx*(phi_ef[i+4] - phi_ef[i+6]);
+                eff[i+6] = .5*ddx*(phi_ef[i+5] - phi_ef[i+7]);
+                eff[i+7] = .5*ddx*(phi_ef[i+6] - phi_ef[i+8]);
+            }
+    }
+    for(;i<end;i++)
+    {
+        if(i==0)
+        {
+            printf("%d %d %d\n", i,start,end);
+        }
+        if (i == Lx-1) 
+        {
+            eff[i] = .5*ddx*(phi_ef[Lx-2] - phi_ef[0]);
+        }
+        else 
+        {
+            eff[i] = .5*ddx*(phi_ef[i-1] - phi_ef[i+1]);
+        }
+    }
+    
+    return NULL;
+}
+
+int THREADMAX = 32;//ThreadMax should eventually be set to the number of cores in the machine.
+
+double update_E_field(double phi_ef1[]) {
+
+    int threadCount = MIN(Lx/16, THREADMAX);
+    
+    pthread_t threads[threadCount];
+    int threadArgs[threadCount];
+    
+    phi_ef= phi_ef1;
+    size = Lx/threadCount +1;
 	//	Differentiate for E Field
-	int i; double eff[Lx+1];
+	int i;
+    for(i =0; i<threadCount; i++)
+    {
+        threadArgs[i] = i;
+        pthread_create(&threads[i], NULL, threadedEField, (void *)&threadArgs[i]);
+    }
+    for (i = 0; i < threadCount; i++) {
+        pthread_join(threads[i], NULL);
+    }
+    /*double eff2[Lx+1];
 	double ddx = 1/dx;
 	for (i=0; i<Lx; i++) {
-		if (i == 0) {eff[i] = .5*ddx*(phi_ef[Lx-1] - phi_ef[1]);}
-		else if (i == Lx-1) {eff[i] = .5*ddx*(phi_ef[Lx-2] - phi_ef[0]);}
-		else {eff[i] = .5*ddx*(phi_ef[i-1] - phi_ef[i+1]);}}
+		if (i == 0) {eff2[i] = .5*ddx*(phi_ef[Lx-1] - phi_ef[1]);}
+		else if (i == Lx-1) {eff2[i] = .5*ddx*(phi_ef[Lx-2] - phi_ef[0]);}
+		else {eff2[i] = .5*ddx*(phi_ef[i-1] - phi_ef[i+1]);}}
+     */
 	
-	for (i=0; i<Lx; i++) {phi_ef[i] = eff[i];}
+	for (i=0; i<Lx; i++) {phi_ef1[i] = eff[i];}
+    //phi_ef = eff;
 	
 	return(1);
 }

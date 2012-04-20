@@ -19,7 +19,7 @@ particles_serial: main_serial.o
 clean:
 	/bin/rm -f *.o particles_serial particles_parallel
 	/bin/rm -rf particles_serial_program particles_parallel_program
-setup:
+setup:clean all
 	mkdir particles_serial_program
 	mkdir particles_parallel_program
 	mv particles_serial particles_serial_program
