@@ -120,7 +120,6 @@ struct thread_data {
 };
 
 int main () {
-	double seconds = read_timer();
 	//srand(time(0));
 	// ++++++++++++++++++++++++++++++++
 	// Inputs
@@ -140,10 +139,11 @@ int main () {
 	// Get the charge on each grid node, and solve for Phi, and get E field
 	// %%%%%%%%%%%%% There is a data-dependency when getting the charge density as I mentioned above %%%%%%%%%%%%%%%%%
 	nodecharge_efield();
-
+    double seconds = read_timer();
 	// Update the particle velocity/position
 	// %%%%%%%%%%%%% This is the part we need to parallelize %%%%%%%%%%%%%%%%%
 	periodic_move_node();
+    double elapsed = read_timer() - seconds;
 
 	// Output checkpoint data for post-processing
 	output();
@@ -154,7 +154,6 @@ int main () {
 	file1 = fopen("v_th.txt", "w");
 	fprintf(file1,"%f\t%f\t%f\t%d\t%d",v_th,v_da,v_db,Lx,tt);
 	fclose(file1);
-	double elapsed = read_timer() - seconds;
 	printf("elapsed time (parallel): %lf seconds\n", elapsed);
 	return EXIT_SUCCESS;
 }
