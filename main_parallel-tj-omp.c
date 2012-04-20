@@ -143,7 +143,7 @@ int main () {
 	file1 = fopen("v_th.txt", "w");
 	fprintf(file1,"%f\t%f\t%f\t%d\t%d",v_th,v_da,v_db,Lx,tt);
 	fclose(file1);
-	printf("elapsed time (serial): %lf\n", elapsed);
+	printf("elapsed time (parallel): %lf\n", elapsed);
 	return EXIT_SUCCESS;	
 }
 
@@ -305,10 +305,10 @@ void periodic_move_node() {
 	double Area1 = 0, Area2 = 0, Area3 = 0, Area4 = 0;
 	double pcn = .5/(double)ppc;
 	double rho[Lx+1],pef[Lx+1];
-    omp_set_num_threads(20);
+    omp_set_num_threads(8);
 	for (ii=1; ii<tt; ii++) {// For each time step - we can't parallelize the time-serial work...
 
-    #pragma omp parallel default(shared) private(xposa,xposb,xposnewa,xposnewb,v_xa,v_xnewa,v_xb,v_xnewb,v_ya,v_za,v_yb,v_zb, ef_inta, ef_intb, i, j, kk, m, n)
+    #pragma omp parallel default(none) shared(Part_Matrix_A, Part_Matrix_B, dt, efield, Npart, ii, ddx) private(xposa,xposb,xposnewa,xposnewb,v_xa,v_xnewa,v_xb,v_xnewb,v_ya,v_za,v_yb,v_zb, ef_inta, ef_intb, i, j, kk, m, n)
         {
             int my_id = omp_get_thread_num();
             int num_threads = omp_get_num_threads();
