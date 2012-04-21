@@ -428,9 +428,21 @@ double update_phi_field(double rho_phi[]) {
 		Bmatrix[i] = -delta2*rho_phi[i];}
 	
 	//	Implement SOR Solution for Phi
-	double phi_new[NMAX] = {0}, phi_old[NMAX] = {0}, Matrix_Product[NMAX] = {0};
-	double tol = 1e-6; double resid[NMAX] = {0}, resid_norm = 1;
-	
+	//double phi_new[NMAX] = {0}, phi_old[NMAX] = {0}, Matrix_Product[NMAX] = {0};
+     double tol = 1e-6; 
+    //double resid[NMAX] = {0}, 
+    double resid_norm = 1;
+    double* phi_new = malloc(NMAX*sizeof(double));
+    double* phi_old = malloc(NMAX*sizeof(double));
+    double* Matrix_Product = malloc(NMAX*sizeof(double));
+    double* resid = malloc(NMAX*sizeof(double));
+    int p = 0;
+    for (p=0; p<NMAX; p++) {
+        phi_new[p] = 0;
+        phi_old[p] = 0;
+        Matrix_Product[p] = 0;
+        resid[p] = 0;
+    }
 	int k,l; double sum_mp, sum_norm;
 	int counter = 0;
 	while (resid_norm > tol && counter< 1000) {
@@ -450,7 +462,10 @@ double update_phi_field(double rho_phi[]) {
 
 	
 	for (i=0; i<Lx; i++) {rho_phi[i] = phi_new[i];}
-	
+	free(phi_new);
+    free(phi_old);
+    free(Matrix_Product);
+    free(resid);
 	return(1);
 }
 
