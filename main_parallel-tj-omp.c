@@ -108,6 +108,11 @@ The pseudo-flowchart is in the 'main' part.
 #include "2strminstb.h"	// This is the header file
 #include <libc.h>
 #include <sys/time.h>
+double phi_new[NMAX];
+double phi_old[NMAX];
+double Matrix_Product[NMAX];
+double resid[NMAX];
+
 int main () {
 	//srand(time(0));
 	// ++++++++++++++++++++++++++++++++
@@ -432,10 +437,6 @@ double update_phi_field(double rho_phi[]) {
      double tol = 1e-6; 
     //double resid[NMAX] = {0}, 
     double resid_norm = 1;
-    double* phi_new = malloc(NMAX*sizeof(double));
-    double* phi_old = malloc(NMAX*sizeof(double));
-    double* Matrix_Product = malloc(NMAX*sizeof(double));
-    double* resid = malloc(NMAX*sizeof(double));
     int p = 0;
     for (p=0; p<NMAX; p++) {
         phi_new[p] = 0;
@@ -462,10 +463,6 @@ double update_phi_field(double rho_phi[]) {
 
 	
 	for (i=0; i<Lx; i++) {rho_phi[i] = phi_new[i];}
-	free(phi_new);
-    free(phi_old);
-    free(Matrix_Product);
-    free(resid);
 	return(1);
 }
 
