@@ -109,7 +109,7 @@ The pseudo-flowchart is in the 'main' part.
 #include <libc.h>
 #include <omp.h>
 #include <pthread.h>
-#define NUM_THREADS 20
+#define NUM_THREADS 8
 pthread_mutex_t mutexcharge = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexefield;
 struct thread_data {
@@ -391,7 +391,7 @@ void * periodic_move_parallel(void *thread_d) {
     struct thread_data *mydata = (struct thread_data *) thread_d;
     int mystartindex = mydata->threadNum * mydata->numElementsPerThread;
     ii = mydata->currentii;
-    for (kk=mystartindex; kk<mystartindex + mydata->numElements; kk++) {
+    for (kk=mystartindex; kk<mystartindex + mydata->numElements; kk+=3) {
 		//	Electron Population A
         xposa = Part_Matrix_A[ii-1][kk][1];
         v_xa = Part_Matrix_A[ii-1][kk][4];
@@ -444,6 +444,502 @@ void * periodic_move_parallel(void *thread_d) {
         if (xposnewb > Lx) {
             Part_Matrix_B[ii][kk][1] = xposnewb -Lx;
         }
+        
+        if (kk +1 <mystartindex + mydata->numElements) {
+            //	Electron Population A
+            xposa = Part_Matrix_A[ii-1][kk+1][1];
+            v_xa = Part_Matrix_A[ii-1][kk+1][4];
+            v_ya = Part_Matrix_A[ii-1][kk+1][5];
+            v_za = Part_Matrix_A[ii-1][kk+1][6];
+            
+            //	Move Particles
+            i = floor(xposa); m = ceil(xposa);
+            ef_save = efield[ii-1][i];
+            ef_inta = (efield[ii-1][m] - ef_save)*(xposa - i)*ddx + ef_save;
+            v_xnewa = v_xa - ef_inta*dt;
+            xposnewa = xposa + v_xnewa*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_A[ii][kk+1][0] = Part_Matrix_A[ii-1][kk][0];
+            Part_Matrix_A[ii][kk+1][1] = xposnewa;
+            Part_Matrix_A[ii][kk+1][4] = v_xnewa;
+            Part_Matrix_A[ii][kk+1][5] = v_ya;
+            Part_Matrix_A[ii][kk+1][6] = v_za;
+            
+            //	Periodic Particle Position
+            if (xposnewa < 0) {
+                Part_Matrix_A[ii][kk+1][1] = xposnewa + Lx;}
+            if (xposnewa > Lx) {
+                Part_Matrix_A[ii][kk+1][1] = xposnewa - Lx;}
+            
+            //	Electron Population B
+            xposb = Part_Matrix_B[ii-1][kk+1][1];
+            v_xb = Part_Matrix_B[ii-1][kk+1][4];
+            v_yb = Part_Matrix_B[ii-1][kk+1][5];
+            v_zb = Part_Matrix_B[ii-1][kk+1][6];
+            
+            //	Move Particles
+            j = floor(xposb); n = ceil(xposb);
+            ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+            v_xnewb = v_xb - ef_intb*dt;
+            xposnewb = xposb + v_xnewb*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_B[ii][kk+1][0] = Part_Matrix_B[ii-1][kk][0];
+            Part_Matrix_B[ii][kk+1][1] = xposnewb;
+            Part_Matrix_B[ii][kk+1][4] = v_xnewb;
+            Part_Matrix_B[ii][kk+1][5] = v_yb;
+            Part_Matrix_B[ii][kk+1][6] = v_zb;
+            
+            //	Periodic Particle Position
+            if (xposnewb < 0) {
+                Part_Matrix_B[ii][kk+1][1] = xposnewb + Lx;
+            }
+            if (xposnewb > Lx) {
+                Part_Matrix_B[ii][kk+1][1] = xposnewb -Lx;
+            }
+        }
+        
+        if (kk +2 <mystartindex + mydata->numElements) {
+            //	Electron Population A
+            xposa = Part_Matrix_A[ii-1][kk+2][1];
+            v_xa = Part_Matrix_A[ii-1][kk+2][4];
+            v_ya = Part_Matrix_A[ii-1][kk+2][5];
+            v_za = Part_Matrix_A[ii-1][kk+2][6];
+            
+            //	Move Particles
+            i = floor(xposa); m = ceil(xposa);
+            ef_save = efield[ii-1][i];
+            ef_inta = (efield[ii-1][m] - ef_save)*(xposa - i)*ddx + ef_save;
+            v_xnewa = v_xa - ef_inta*dt;
+            xposnewa = xposa + v_xnewa*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_A[ii][kk+2][0] = Part_Matrix_A[ii-1][kk][0];
+            Part_Matrix_A[ii][kk+2][1] = xposnewa;
+            Part_Matrix_A[ii][kk+2][4] = v_xnewa;
+            Part_Matrix_A[ii][kk+2][5] = v_ya;
+            Part_Matrix_A[ii][kk+2][6] = v_za;
+            
+            //	Periodic Particle Position
+            if (xposnewa < 0) {
+                Part_Matrix_A[ii][kk+2][1] = xposnewa + Lx;}
+            if (xposnewa > Lx) {
+                Part_Matrix_A[ii][kk+2][1] = xposnewa - Lx;}
+            
+            //	Electron Population B
+            xposb = Part_Matrix_B[ii-1][kk+2][1];
+            v_xb = Part_Matrix_B[ii-1][kk+2][4];
+            v_yb = Part_Matrix_B[ii-1][kk+2][5];
+            v_zb = Part_Matrix_B[ii-1][kk+2][6];
+            
+            //	Move Particles
+            j = floor(xposb); n = ceil(xposb);
+            ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+            v_xnewb = v_xb - ef_intb*dt;
+            xposnewb = xposb + v_xnewb*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_B[ii][kk+2][0] = Part_Matrix_B[ii-1][kk][0];
+            Part_Matrix_B[ii][kk+2][1] = xposnewb;
+            Part_Matrix_B[ii][kk+2][4] = v_xnewb;
+            Part_Matrix_B[ii][kk+2][5] = v_yb;
+            Part_Matrix_B[ii][kk+2][6] = v_zb;
+            
+            //	Periodic Particle Position
+            if (xposnewb < 0) {
+                Part_Matrix_B[ii][kk+2][1] = xposnewb + Lx;
+            }
+            if (xposnewb > Lx) {
+                Part_Matrix_B[ii][kk+2][1] = xposnewb -Lx;
+            }
+        }
+        /*
+        if (kk +3 <mystartindex + mydata->numElements) {
+            //	Electron Population A
+            xposa = Part_Matrix_A[ii-1][kk+3][1];
+            v_xa = Part_Matrix_A[ii-1][kk+3][4];
+            v_ya = Part_Matrix_A[ii-1][kk+3][5];
+            v_za = Part_Matrix_A[ii-1][kk+3][6];
+            
+            //	Move Particles
+            i = floor(xposa); m = ceil(xposa);
+            ef_save = efield[ii-1][i];
+            ef_inta = (efield[ii-1][m] - ef_save)*(xposa - i)*ddx + ef_save;
+            v_xnewa = v_xa - ef_inta*dt;
+            xposnewa = xposa + v_xnewa*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_A[ii][kk+3][0] = Part_Matrix_A[ii-1][kk][0];
+            Part_Matrix_A[ii][kk+3][1] = xposnewa;
+            Part_Matrix_A[ii][kk+3][4] = v_xnewa;
+            Part_Matrix_A[ii][kk+3][5] = v_ya;
+            Part_Matrix_A[ii][kk+3][6] = v_za;
+            
+            //	Periodic Particle Position
+            if (xposnewa < 0) {
+                Part_Matrix_A[ii][kk+3][1] = xposnewa + Lx;}
+            if (xposnewa > Lx) {
+                Part_Matrix_A[ii][kk+3][1] = xposnewa - Lx;}
+            
+            //	Electron Population B
+            xposb = Part_Matrix_B[ii-1][kk+3][1];
+            v_xb = Part_Matrix_B[ii-1][kk+3][4];
+            v_yb = Part_Matrix_B[ii-1][kk+3][5];
+            v_zb = Part_Matrix_B[ii-1][kk+3][6];
+            
+            //	Move Particles
+            j = floor(xposb); n = ceil(xposb);
+            ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+            v_xnewb = v_xb - ef_intb*dt;
+            xposnewb = xposb + v_xnewb*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_B[ii][kk+3][0] = Part_Matrix_B[ii-1][kk][0];
+            Part_Matrix_B[ii][kk+3][1] = xposnewb;
+            Part_Matrix_B[ii][kk+3][4] = v_xnewb;
+            Part_Matrix_B[ii][kk+3][5] = v_yb;
+            Part_Matrix_B[ii][kk+3][6] = v_zb;
+            
+            //	Periodic Particle Position
+            if (xposnewb < 0) {
+                Part_Matrix_B[ii][kk+3][1] = xposnewb + Lx;
+            }
+            if (xposnewb > Lx) {
+                Part_Matrix_B[ii][kk+3][1] = xposnewb -Lx;
+            }
+        }
+        
+        if (kk +4 <mystartindex + mydata->numElements) {
+            //	Electron Population A
+            xposa = Part_Matrix_A[ii-1][kk+4][1];
+            v_xa = Part_Matrix_A[ii-1][kk+4][4];
+            v_ya = Part_Matrix_A[ii-1][kk+4][5];
+            v_za = Part_Matrix_A[ii-1][kk+4][6];
+            
+            //	Move Particles
+            i = floor(xposa); m = ceil(xposa);
+            ef_save = efield[ii-1][i];
+            ef_inta = (efield[ii-1][m] - ef_save)*(xposa - i)*ddx + ef_save;
+            v_xnewa = v_xa - ef_inta*dt;
+            xposnewa = xposa + v_xnewa*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_A[ii][kk+4][0] = Part_Matrix_A[ii-1][kk][0];
+            Part_Matrix_A[ii][kk+4][1] = xposnewa;
+            Part_Matrix_A[ii][kk+4][4] = v_xnewa;
+            Part_Matrix_A[ii][kk+4][5] = v_ya;
+            Part_Matrix_A[ii][kk+4][6] = v_za;
+            
+            //	Periodic Particle Position
+            if (xposnewa < 0) {
+                Part_Matrix_A[ii][kk+4][1] = xposnewa + Lx;}
+            if (xposnewa > Lx) {
+                Part_Matrix_A[ii][kk+4][1] = xposnewa - Lx;}
+            
+            //	Electron Population B
+            xposb = Part_Matrix_B[ii-1][kk+4][1];
+            v_xb = Part_Matrix_B[ii-1][kk+4][4];
+            v_yb = Part_Matrix_B[ii-1][kk+4][5];
+            v_zb = Part_Matrix_B[ii-1][kk+4][6];
+            
+            //	Move Particles
+            j = floor(xposb); n = ceil(xposb);
+            ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+            v_xnewb = v_xb - ef_intb*dt;
+            xposnewb = xposb + v_xnewb*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_B[ii][kk+4][0] = Part_Matrix_B[ii-1][kk][0];
+            Part_Matrix_B[ii][kk+4][1] = xposnewb;
+            Part_Matrix_B[ii][kk+4][4] = v_xnewb;
+            Part_Matrix_B[ii][kk+4][5] = v_yb;
+            Part_Matrix_B[ii][kk+4][6] = v_zb;
+            
+            //	Periodic Particle Position
+            if (xposnewb < 0) {
+                Part_Matrix_B[ii][kk+4][1] = xposnewb + Lx;
+            }
+            if (xposnewb > Lx) {
+                Part_Matrix_B[ii][kk+4][1] = xposnewb -Lx;
+            }
+        }
+        
+        if (kk +5 <mystartindex + mydata->numElements) {
+            //	Electron Population A
+            xposa = Part_Matrix_A[ii-1][kk+5][1];
+            v_xa = Part_Matrix_A[ii-1][kk+5][4];
+            v_ya = Part_Matrix_A[ii-1][kk+5][5];
+            v_za = Part_Matrix_A[ii-1][kk+5][6];
+            
+            //	Move Particles
+            i = floor(xposa); m = ceil(xposa);
+            ef_save = efield[ii-1][i];
+            ef_inta = (efield[ii-1][m] - ef_save)*(xposa - i)*ddx + ef_save;
+            v_xnewa = v_xa - ef_inta*dt;
+            xposnewa = xposa + v_xnewa*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_A[ii][kk+5][0] = Part_Matrix_A[ii-1][kk][0];
+            Part_Matrix_A[ii][kk+5][1] = xposnewa;
+            Part_Matrix_A[ii][kk+5][4] = v_xnewa;
+            Part_Matrix_A[ii][kk+5][5] = v_ya;
+            Part_Matrix_A[ii][kk+5][6] = v_za;
+            
+            //	Periodic Particle Position
+            if (xposnewa < 0) {
+                Part_Matrix_A[ii][kk+5][1] = xposnewa + Lx;}
+            if (xposnewa > Lx) {
+                Part_Matrix_A[ii][kk+5][1] = xposnewa - Lx;}
+            
+            //	Electron Population B
+            xposb = Part_Matrix_B[ii-1][kk+5][1];
+            v_xb = Part_Matrix_B[ii-1][kk+5][4];
+            v_yb = Part_Matrix_B[ii-1][kk+5][5];
+            v_zb = Part_Matrix_B[ii-1][kk+5][6];
+            
+            //	Move Particles
+            j = floor(xposb); n = ceil(xposb);
+            ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+            v_xnewb = v_xb - ef_intb*dt;
+            xposnewb = xposb + v_xnewb*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_B[ii][kk+5][0] = Part_Matrix_B[ii-1][kk][0];
+            Part_Matrix_B[ii][kk+5][1] = xposnewb;
+            Part_Matrix_B[ii][kk+5][4] = v_xnewb;
+            Part_Matrix_B[ii][kk+5][5] = v_yb;
+            Part_Matrix_B[ii][kk+5][6] = v_zb;
+            
+            //	Periodic Particle Position
+            if (xposnewb < 0) {
+                Part_Matrix_B[ii][kk+5][1] = xposnewb + Lx;
+            }
+            if (xposnewb > Lx) {
+                Part_Matrix_B[ii][kk+5][1] = xposnewb -Lx;
+            }
+        }
+        
+        if (kk +6 <mystartindex + mydata->numElements) {
+            //	Electron Population A
+            xposa = Part_Matrix_A[ii-1][kk+6][1];
+            v_xa = Part_Matrix_A[ii-1][kk+6][4];
+            v_ya = Part_Matrix_A[ii-1][kk+6][5];
+            v_za = Part_Matrix_A[ii-1][kk+6][6];
+            
+            //	Move Particles
+            i = floor(xposa); m = ceil(xposa);
+            ef_save = efield[ii-1][i];
+            ef_inta = (efield[ii-1][m] - ef_save)*(xposa - i)*ddx + ef_save;
+            v_xnewa = v_xa - ef_inta*dt;
+            xposnewa = xposa + v_xnewa*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_A[ii][kk+6][0] = Part_Matrix_A[ii-1][kk][0];
+            Part_Matrix_A[ii][kk+6][1] = xposnewa;
+            Part_Matrix_A[ii][kk+6][4] = v_xnewa;
+            Part_Matrix_A[ii][kk+6][5] = v_ya;
+            Part_Matrix_A[ii][kk+6][6] = v_za;
+            
+            //	Periodic Particle Position
+            if (xposnewa < 0) {
+                Part_Matrix_A[ii][kk+6][1] = xposnewa + Lx;}
+            if (xposnewa > Lx) {
+                Part_Matrix_A[ii][kk+6][1] = xposnewa - Lx;}
+            
+            //	Electron Population B
+            xposb = Part_Matrix_B[ii-1][kk+6][1];
+            v_xb = Part_Matrix_B[ii-1][kk+6][4];
+            v_yb = Part_Matrix_B[ii-1][kk+6][5];
+            v_zb = Part_Matrix_B[ii-1][kk+6][6];
+            
+            //	Move Particles
+            j = floor(xposb); n = ceil(xposb);
+            ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+            v_xnewb = v_xb - ef_intb*dt;
+            xposnewb = xposb + v_xnewb*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_B[ii][kk+6][0] = Part_Matrix_B[ii-1][kk][0];
+            Part_Matrix_B[ii][kk+6][1] = xposnewb;
+            Part_Matrix_B[ii][kk+6][4] = v_xnewb;
+            Part_Matrix_B[ii][kk+6][5] = v_yb;
+            Part_Matrix_B[ii][kk+6][6] = v_zb;
+            
+            //	Periodic Particle Position
+            if (xposnewb < 0) {
+                Part_Matrix_B[ii][kk+6][1] = xposnewb + Lx;
+            }
+            if (xposnewb > Lx) {
+                Part_Matrix_B[ii][kk+6][1] = xposnewb -Lx;
+            }
+        }
+        
+        if (kk +7 <mystartindex + mydata->numElements) {
+            //	Electron Population A
+            xposa = Part_Matrix_A[ii-1][kk+7][1];
+            v_xa = Part_Matrix_A[ii-1][kk+7][4];
+            v_ya = Part_Matrix_A[ii-1][kk+7][5];
+            v_za = Part_Matrix_A[ii-1][kk+7][6];
+            
+            //	Move Particles
+            i = floor(xposa); m = ceil(xposa);
+            ef_save = efield[ii-1][i];
+            ef_inta = (efield[ii-1][m] - ef_save)*(xposa - i)*ddx + ef_save;
+            v_xnewa = v_xa - ef_inta*dt;
+            xposnewa = xposa + v_xnewa*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_A[ii][kk+7][0] = Part_Matrix_A[ii-1][kk][0];
+            Part_Matrix_A[ii][kk+7][1] = xposnewa;
+            Part_Matrix_A[ii][kk+7][4] = v_xnewa;
+            Part_Matrix_A[ii][kk+7][5] = v_ya;
+            Part_Matrix_A[ii][kk+7][6] = v_za;
+            
+            //	Periodic Particle Position
+            if (xposnewa < 0) {
+                Part_Matrix_A[ii][kk+7][1] = xposnewa + Lx;}
+            if (xposnewa > Lx) {
+                Part_Matrix_A[ii][kk+7][1] = xposnewa - Lx;}
+            
+            //	Electron Population B
+            xposb = Part_Matrix_B[ii-1][kk+7][1];
+            v_xb = Part_Matrix_B[ii-1][kk+7][4];
+            v_yb = Part_Matrix_B[ii-1][kk+7][5];
+            v_zb = Part_Matrix_B[ii-1][kk+7][6];
+            
+            //	Move Particles
+            j = floor(xposb); n = ceil(xposb);
+            ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+            v_xnewb = v_xb - ef_intb*dt;
+            xposnewb = xposb + v_xnewb*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_B[ii][kk+7][0] = Part_Matrix_B[ii-1][kk][0];
+            Part_Matrix_B[ii][kk+7][1] = xposnewb;
+            Part_Matrix_B[ii][kk+7][4] = v_xnewb;
+            Part_Matrix_B[ii][kk+7][5] = v_yb;
+            Part_Matrix_B[ii][kk+7][6] = v_zb;
+            
+            //	Periodic Particle Position
+            if (xposnewb < 0) {
+                Part_Matrix_B[ii][kk+7][1] = xposnewb + Lx;
+            }
+            if (xposnewb > Lx) {
+                Part_Matrix_B[ii][kk+7][1] = xposnewb -Lx;
+            }
+        }
+        
+        if (kk +8 <mystartindex + mydata->numElements) {
+            //	Electron Population A
+            xposa = Part_Matrix_A[ii-1][kk+8][1];
+            v_xa = Part_Matrix_A[ii-1][kk+8][4];
+            v_ya = Part_Matrix_A[ii-1][kk+8][5];
+            v_za = Part_Matrix_A[ii-1][kk+8][6];
+            
+            //	Move Particles
+            i = floor(xposa); m = ceil(xposa);
+            ef_save = efield[ii-1][i];
+            ef_inta = (efield[ii-1][m] - ef_save)*(xposa - i)*ddx + ef_save;
+            v_xnewa = v_xa - ef_inta*dt;
+            xposnewa = xposa + v_xnewa*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_A[ii][kk+8][0] = Part_Matrix_A[ii-1][kk][0];
+            Part_Matrix_A[ii][kk+8][1] = xposnewa;
+            Part_Matrix_A[ii][kk+8][4] = v_xnewa;
+            Part_Matrix_A[ii][kk+8][5] = v_ya;
+            Part_Matrix_A[ii][kk+8][6] = v_za;
+            
+            //	Periodic Particle Position
+            if (xposnewa < 0) {
+                Part_Matrix_A[ii][kk+8][1] = xposnewa + Lx;}
+            if (xposnewa > Lx) {
+                Part_Matrix_A[ii][kk+8][1] = xposnewa - Lx;}
+            
+            //	Electron Population B
+            xposb = Part_Matrix_B[ii-1][kk+8][1];
+            v_xb = Part_Matrix_B[ii-1][kk+8][4];
+            v_yb = Part_Matrix_B[ii-1][kk+8][5];
+            v_zb = Part_Matrix_B[ii-1][kk+8][6];
+            
+            //	Move Particles
+            j = floor(xposb); n = ceil(xposb);
+            ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+            v_xnewb = v_xb - ef_intb*dt;
+            xposnewb = xposb + v_xnewb*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_B[ii][kk+8][0] = Part_Matrix_B[ii-1][kk][0];
+            Part_Matrix_B[ii][kk+8][1] = xposnewb;
+            Part_Matrix_B[ii][kk+8][4] = v_xnewb;
+            Part_Matrix_B[ii][kk+8][5] = v_yb;
+            Part_Matrix_B[ii][kk+8][6] = v_zb;
+            
+            //	Periodic Particle Position
+            if (xposnewb < 0) {
+                Part_Matrix_B[ii][kk+8][1] = xposnewb + Lx;
+            }
+            if (xposnewb > Lx) {
+                Part_Matrix_B[ii][kk+8][1] = xposnewb -Lx;
+            }
+        }
+        
+        if (kk +9 <mystartindex + mydata->numElements) {
+            //	Electron Population A
+            xposa = Part_Matrix_A[ii-1][kk+9][1];
+            v_xa = Part_Matrix_A[ii-1][kk+9][4];
+            v_ya = Part_Matrix_A[ii-1][kk+9][5];
+            v_za = Part_Matrix_A[ii-1][kk+9][6];
+            
+            //	Move Particles
+            i = floor(xposa); m = ceil(xposa);
+            ef_save = efield[ii-1][i];
+            ef_inta = (efield[ii-1][m] - ef_save)*(xposa - i)*ddx + ef_save;
+            v_xnewa = v_xa - ef_inta*dt;
+            xposnewa = xposa + v_xnewa*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_A[ii][kk+9][0] = Part_Matrix_A[ii-1][kk][0];
+            Part_Matrix_A[ii][kk+9][1] = xposnewa;
+            Part_Matrix_A[ii][kk+9][4] = v_xnewa;
+            Part_Matrix_A[ii][kk+9][5] = v_ya;
+            Part_Matrix_A[ii][kk+9][6] = v_za;
+            
+            //	Periodic Particle Position
+            if (xposnewa < 0) {
+                Part_Matrix_A[ii][kk+9][1] = xposnewa + Lx;}
+            if (xposnewa > Lx) {
+                Part_Matrix_A[ii][kk+9][1] = xposnewa - Lx;}
+            
+            //	Electron Population B
+            xposb = Part_Matrix_B[ii-1][kk+9][1];
+            v_xb = Part_Matrix_B[ii-1][kk+9][4];
+            v_yb = Part_Matrix_B[ii-1][kk+9][5];
+            v_zb = Part_Matrix_B[ii-1][kk+9][6];
+            
+            //	Move Particles
+            j = floor(xposb); n = ceil(xposb);
+            ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+            v_xnewb = v_xb - ef_intb*dt;
+            xposnewb = xposb + v_xnewb*dt;
+            
+            //	Update Particle Positions and Velocities
+            Part_Matrix_B[ii][kk+9][0] = Part_Matrix_B[ii-1][kk][0];
+            Part_Matrix_B[ii][kk+9][1] = xposnewb;
+            Part_Matrix_B[ii][kk+9][4] = v_xnewb;
+            Part_Matrix_B[ii][kk+9][5] = v_yb;
+            Part_Matrix_B[ii][kk+9][6] = v_zb;
+            
+            //	Periodic Particle Position
+            if (xposnewb < 0) {
+                Part_Matrix_B[ii][kk+9][1] = xposnewb + Lx;
+            }
+            if (xposnewb > Lx) {
+                Part_Matrix_B[ii][kk+9][1] = xposnewb -Lx;
+            }
+        }*/
+        
 
 
     }
