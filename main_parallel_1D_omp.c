@@ -108,12 +108,14 @@ The pseudo-flowchart is in the 'main' part.
 #include "2strminstb.h"	// This is the header file
 #include <libc.h>
 #include <sys/time.h>
+#include <omp.h>
 double phi_new[NMAX];
 double phi_old[NMAX];
 double Matrix_Product[NMAX];
 double resid[NMAX];
 
 int main () {
+    omp_set_num_threads(8);
 	//srand(time(0));
 	// ++++++++++++++++++++++++++++++++
 	// Inputs
@@ -362,7 +364,6 @@ void periodic_move_node() {
 	double Area1 = 0, Area2 = 0, Area3 = 0, Area4 = 0;
 	double pcn = .5/(double)ppc;
 	double rho[Lx+1],pef[Lx+1];
-    omp_set_num_threads(8);
 	for (ii=1; ii<tt; ii++) {// For each time step - we can't parallelize the time-serial work...
 
     #pragma omp parallel default(none) shared(Part_Matrix_A, Part_Matrix_B, dt, efield, Npart, ii, ddx) private(xposa,xposb,xposnewa,xposnewb,v_xa,v_xnewa,v_xb,v_xnewb,v_ya,v_za,v_yb,v_zb, ef_inta, ef_intb, i, j, kk, m, n)
@@ -480,6 +481,7 @@ void periodic_move_node() {
 double update_phi_field(double rho_phi[]) {
 	
 	
+    
 	//	Construct B Matrix
 	int i; double Bmatrix[mad];
 	for (i=0; i<Lx; i++) {
@@ -494,7 +496,7 @@ double update_phi_field(double rho_phi[]) {
 	while (resid_norm > tol && counter < 1000) {
 		for (k=0; k<Lx; k++) {phi_old[k] = phi_new[k];}
         
-        //#pragma omp parallel for default(shared) private(sum_mp, sum_norm, k, resid_norm) 
+#pragma omp parallel for default(shared) private(sum_mp, k, l, sum_norm)
 		for (k=0; k<Lx; k++) {
 			sum_mp = 0; sum_norm = 0;
 			for (l=0; l<Lx; l++) {sum_mp += (double)Amatrix[k][l]*phi_new[l];}
