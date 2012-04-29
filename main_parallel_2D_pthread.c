@@ -519,7 +519,7 @@ void inject_node_move() {
 				PMO[apd][idx] = dpm[inj][idx];}
 		}*/
         
-        for (inj=0; inj<Pinj; inj++) {
+        for (inj=0; inj<Pinj; inj+=5) {
 			 apd = newcount + inj;
              PMO[apd][0] = dpm[inj][0];
              PMO[apd][1] = dpm[inj][1];
@@ -528,6 +528,50 @@ void inject_node_move() {
              PMO[apd][4] = dpm[inj][4];
              PMO[apd][5] = dpm[inj][5];
              PMO[apd][6] = dpm[inj][6];
+             if (inj + 1 < Pinj) {
+                 int new_inj = inj+1;
+                 apd = newcount + new_inj;
+                 PMO[apd][0] = dpm[new_inj][0];
+                 PMO[apd][1] = dpm[new_inj][1];
+                 PMO[apd][2] = dpm[new_inj][2];
+                 PMO[apd][3] = dpm[new_inj][3];
+                 PMO[apd][4] = dpm[new_inj][4];
+                 PMO[apd][5] = dpm[new_inj][5];
+                 PMO[apd][6] = dpm[new_inj][6];
+                 if (inj + 2 < Pinj) {
+                     int new_inj = inj+2;
+                     apd = newcount + new_inj;
+                     PMO[apd][0] = dpm[new_inj][0];
+                     PMO[apd][1] = dpm[new_inj][1];
+                     PMO[apd][2] = dpm[new_inj][2];
+                     PMO[apd][3] = dpm[new_inj][3];
+                     PMO[apd][4] = dpm[new_inj][4];
+                     PMO[apd][5] = dpm[new_inj][5];
+                     PMO[apd][6] = dpm[new_inj][6];
+                     if (inj + 3 < Pinj) {
+                         int new_inj = inj+3;
+                         apd = newcount + new_inj;
+                         PMO[apd][0] = dpm[new_inj][0];
+                         PMO[apd][1] = dpm[new_inj][1];
+                         PMO[apd][2] = dpm[new_inj][2];
+                         PMO[apd][3] = dpm[new_inj][3];
+                         PMO[apd][4] = dpm[new_inj][4];
+                         PMO[apd][5] = dpm[new_inj][5];
+                         PMO[apd][6] = dpm[new_inj][6];
+                         if (inj + 4 < Pinj) {
+                             int new_inj = inj+4;
+                             apd = newcount + new_inj;
+                             PMO[apd][0] = dpm[new_inj][0];
+                             PMO[apd][1] = dpm[new_inj][1];
+                             PMO[apd][2] = dpm[new_inj][2];
+                             PMO[apd][3] = dpm[new_inj][3];
+                             PMO[apd][4] = dpm[new_inj][4];
+                             PMO[apd][5] = dpm[new_inj][5];
+                             PMO[apd][6] = dpm[new_inj][6];
+                         }
+                     }
+                 }
+             }
 		}
 
 		//	Update Ion Node Charge
