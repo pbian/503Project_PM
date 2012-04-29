@@ -718,8 +718,13 @@ void inject_node_move() {
 		newcount = pct[ii];
 		//	Update Particle Matrix
 		for (k=0; k<newcount; k++) {
-			for (idx=0; idx<indx; idx++) {
-				Part_Matrix[k][idx] = dpm[k][idx];}
+            Part_Matrix[k][0] = dpm[k][0];
+            Part_Matrix[k][1] = dpm[k][1];
+            Part_Matrix[k][2] = dpm[k][2];
+            Part_Matrix[k][3] = dpm[k][3];
+            Part_Matrix[k][4] = dpm[k][4];
+            Part_Matrix[k][5] = dpm[k][5];
+            Part_Matrix[k][6] = dpm[k][6];
 		}
 		
 	}
