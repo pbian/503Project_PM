@@ -284,9 +284,9 @@ void nodecharge_efield() {
 		normchargenodeB[0][ic] = pcn*chargenodeB[0][ic];
 		normdiff[0][ic] = 1 - normchargenodeA[0][ic] - normchargenodeB[0][ic];
 		rho[ic] = normdiff[0][ic];}
-	
-	printf("\nTimestep:\t%4d\n",0);
-	
+	if (rank == 0) {
+        printf("\nTimestep:\t%4d\n",0);
+	}
 	update_phi_field(rho);
 	for (ef=0; ef<Lx; ef++) {
 		phi[0][ef] = rho[ef];
@@ -404,9 +404,9 @@ void periodic_move_node() {
 			normdiff[ii][ic] = 1 - normchargenodeA[ii][ic] - normchargenodeB[ii][ic];
 			rho[ic] = normdiff[ii][ic];
 		}
-		
-		if (ii==.2*tt-1||ii ==.4*tt-1||ii ==.6*tt-1||ii==.8*tt-1||ii==tt-1) {printf("Timestep:\t%4d\n",ii + 1);}
-		
+		if (rank == 0) {
+            if (ii==.2*tt-1||ii ==.4*tt-1||ii ==.6*tt-1||ii==.8*tt-1||ii==tt-1) {printf("Timestep:\t%4d\n",ii + 1);}
+		}
 		update_phi_field(rho);
 		for (ef=0; ef<Lx; ef++) {
 			phi[ii][ef] = rho[ef];
