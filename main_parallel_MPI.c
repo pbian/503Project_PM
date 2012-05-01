@@ -484,10 +484,11 @@ double update_phi_field(double rho_phi[]) {
 	max_recv_size_Amatrix = (counts_Amatrix[size - 1] > counts_Amatrix[0]) ? counts_Amatrix[size - 1]:  counts_Amatrix[0];
 	MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, max_recv_size_Amatrix, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	while (resid_norm > tol && counter < 1000) {
-		//MPI Seems a poor choice for this loop
+		if (rank == 0) {//MPI Seems a poor choice for this loop
 		for (k=0; k<Lx; k++) {
 			phi_old[k] = phi_new[k];
 		}
+        }
 		MPI_Bcast(phi_new, Lx, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         
         for (k=0; k<counts_phi[rank]; k++) {
@@ -499,12 +500,15 @@ double update_phi_field(double rho_phi[]) {
         }
         MPI_Gatherv(my_matrix_prod_sub, counts_phi[rank], MPI_DOUBLE, Matrix_Product, counts_phi, displs_phi, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         
+        if (rank == 0) {
 		//MPI seems a poor choice for this loop as well
 		for (k=0; k<Lx; k++) {
 			resid[k] = Matrix_Product[k] - Bmatrix[k];
 			phi_new[k] = phi_old[k] + .5*omega*resid[k];
 			sum_norm += resid[k]*resid[k];}
+        }
 		resid_norm = sqrt(sum_norm);
+        MPI_Bcast(&resid_norm, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 		counter++;
 		//	printf("Residuals:\t%f\n",resid_norm);
 	}
