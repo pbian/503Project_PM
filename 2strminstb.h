@@ -2,11 +2,11 @@
 
 
 // We use static arrays so no dynamic allocations
-#define NMAX 200000			// for a sufficiently large array
-#define mad 500				// for a small array
-#define ppc 800			// particles per cell
+#define NMAX 400000			// for a sufficiently large array
+#define mad 600				// for a small array
+#define ppc 500			// particles per cell
 #define tt 40				// total time steps
-#define Lx 52
+#define Lx 500
 int dx;
 int count;
 int Npart;
@@ -23,7 +23,6 @@ int Amatrix[Lx][Lx] = {0};
 // [7] means 7 variables for each particle: index (This particle is the index_th particle in the TOTAL particles); x, y, z; Vx, Vy, Vz
 double Part_Matrix_A[tt][NMAX][7];
 double Part_Matrix_B[tt][NMAX][7];
-
 // charge for populations A and B
 double chargenodeA[tt][NMAX];
 double chargenodeB[tt][NMAX];
