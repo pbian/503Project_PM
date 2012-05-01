@@ -51,7 +51,6 @@ int main () {
         printf("Elapsed time (parallel (MPI-2D)): %f seconds\n", elapsed); 
     }
     MPI_Finalize();
-    printf("Done\n");
     return EXIT_SUCCESS;
 }
 
@@ -443,40 +442,46 @@ double nl_phi_solver(double ni_phi[]) {
 		displs_phi[dis_index] = dis_index*counts_phi[0];
 		displs_Amatrix[dis_index] = dis_index*counts_Amatrix[0];
 	}
-        double *my_matrix_prod_sub = malloc((counts_phi[rank])*sizeof(double)); 
-    //printf("nmax: %i\n", nmax);
-    //printf("counts phi: %i \n %i \n %i \n %i \n %i\n", counts_phi[0], counts_phi[1], counts_phi[2], counts_phi[3], counts_phi[4]);
-    //printf("counts Amatrix: %i \n %i \n %i \n %i \n %i\n", counts_Amatrix[0], counts_Amatrix[1], counts_Amatrix[2], counts_Amatrix[3], counts_Amatrix[4]);
-    //printf("displacements phi: \n %i \n %i \n %i \n %i \n %i \n", displs_phi[0], displs_phi[1], displs_phi[2], displs_phi[3], displs_phi[4]);
+    double *my_matrix_prod_sub = malloc((counts_phi[rank])*sizeof(double)); 
 	max_recv_size_phi = (counts_phi[size - 1] > counts_phi[0]) ? counts_phi[size - 1] : counts_phi[0];
 	max_recv_size_Amatrix = (counts_Amatrix[size - 1] > counts_Amatrix[0]) ? counts_Amatrix[size - 1]:  counts_Amatrix[0];
 	while (resid_norm > tol) {
-		//	Update Phi, Alpha, Beta
-		for (k=0; k<nmax; k++) {
-			phi_old[k] = phi_new[k];
-			alpha[k] = 4 + delta2*exp(phi_old[k]);
-			beta[k] = (1 - phi_old[k])*exp(phi_old[k]) - ni_phi[k];}
-		//	Update Amatrix & Bmatrix
-		for (j=0; j<jmax; j++) {
-			for (i=0; i<imax; i++) {
-				k = imax*j + i;
-				//Amatrix_linear[k*nmax+k] = -alpha[k];
-				if (i == 0) {Bmatrix[k] = delta2*beta[k] - LeftBC;}
-				else if (i == imax-1) {Bmatrix[k] = delta2*beta[k] - RightBC;}
-				else {Bmatrix[k] = delta2*beta[k];}}}
-       /*for (x = 0; x<nmax; x++) {
-            Amatrix_linear[x*nmax + x] = -alpha[x]; 
-        }*/
-        /*int current_dis = displs_Amatrix[rank];
+        if (rank == 0) {
+            //	Update Phi, Alpha, Beta
+            for (k=0; k<nmax; k++) {
+                phi_old[k] = phi_new[k];
+                alpha[k] = 4 + delta2*exp(phi_old[k]);
+                beta[k] = (1 - phi_old[k])*exp(phi_old[k]) - ni_phi[k];}
+            //	Update Amatrix & Bmatrix
+            for (j=0; j<jmax; j++) {
+                for (i=0; i<imax; i++) {
+                    k = imax*j + i;
+                    //Amatrix_linear[k*nmax+k] = -alpha[k];
+                    if (i == 0) {Bmatrix[k] = delta2*beta[k] - LeftBC;}
+                    else if (i == imax-1) {Bmatrix[k] = delta2*beta[k] - RightBC;}
+                    else {Bmatrix[k] = delta2*beta[k];}}}
+            /*for (x = 0; x<nmax; x++) {
+                Amatrix_linear[x*nmax + x] = -alpha[x]; 
+            }*/
+        }
+
+        MPI_Bcast(phi_new, nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(alpha, nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+		//	Implement SOR Solver
+        //MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, nmax*nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        int current_dis = displs_Amatrix[rank];
         int row = current_dis/nmax;
         int column = current_dis%nmax;
-        int diags = 0;
-        for (x = 0; x<counts_phi[rank]; x++) {
-            for (y = 0; y<nmax; y++) {
+        int first_diag = 0;
+        int first_diag_dis = 0;
+        int first_diag_index = 0;
+        for (m=0; m<counts_phi[rank]; m++) {
+            sum_mp = 0; sum_norm = 0;
+            for (n=0; n<nmax; n++) {
                 if (row == column) {
-                    my_sub_Amatrix[x*nmax + y] = -alpha[diags];
-                    if (diags == 0) diags = row;
-                    else diags++;
+                    sum_mp += -alpha[row]*phi_new[n];
+                } else {
+                    sum_mp += my_sub_Amatrix[m*nmax + n]*phi_new[n];
                 }
                 if (column == nmax - 1) {
                     column = 0;
@@ -485,55 +490,18 @@ double nl_phi_solver(double ni_phi[]) {
                     column++;
                 }
             }
-        }*/
-        int current_dis = displs_Amatrix[rank];
-        int row = current_dis/nmax;
-        int column = current_dis%nmax;
-        int first_diag = 0;
-        int first_diag_dis = 0;
-        int first_diag_index = 0;
-        if (column > row) {
-            first_diag = row + 1;
-            first_diag_dis = row + 1;
-            first_diag_index = nmax - column + first_diag_dis; 
-        } else if (column == row) {
-            first_diag = row;
-            first_diag_dis = 0;
-            first_diag_index = 0;
-        } else {
-            first_diag = row;
-            first_diag_dis = row - column;
-            first_diag_index = first_diag_dis;
-        }
-        first_diag+= row;
-        int stop = counts_phi[rank];
-        if (first_diag == row+1) {
-            stop = counts_phi[rank] - 1;
-        }
-        //int row = current_dis/nmax;
-        for (x = 0; x<stop; x++) {
-            my_sub_Amatrix[first_diag_index] = -alpha[first_diag];
-            first_diag += 1;
-            first_diag_index += nmax + 1;
-        }
-        
-		//	Implement SOR Solver
-        MPI_Bcast(phi_new, nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        //MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, nmax*nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        for (m=0; m<counts_phi[rank]; m++) {
-            sum_mp = 0; sum_norm = 0;
-            for (n=0; n<nmax; n++) {
-                sum_mp += (double)my_sub_Amatrix[m*nmax + n]*phi_new[n];
-            }
             my_matrix_prod_sub[m] = sum_mp;
         }
-       MPI_Gatherv(my_matrix_prod_sub, counts_phi[rank], MPI_DOUBLE, Matrix_Product, counts_phi, displs_phi, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         
-		for (k=0; k<nmax; k++) {
-			resid[k] = Matrix_Product[k] - Bmatrix[k];
-			phi_new[k] = phi_old[k] + omega*resid[k]/alpha[k];
-			sum_norm += resid[k]*resid[k];}
-		resid_norm = sqrt(sum_norm);
+       MPI_Gatherv(my_matrix_prod_sub, counts_phi[rank], MPI_DOUBLE, Matrix_Product, counts_phi, displs_phi, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        if (rank == 0) {
+            for (k=0; k<nmax; k++) {
+                resid[k] = Matrix_Product[k] - Bmatrix[k];
+                phi_new[k] = phi_old[k] + omega*resid[k]/alpha[k];
+                sum_norm += resid[k]*resid[k];}
+            resid_norm = sqrt(sum_norm);
+        }
+        MPI_Bcast(&resid_norm, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 		counter++;
     }
 	
@@ -551,6 +519,7 @@ double nl_phi_solver(double ni_phi[]) {
         printf("Residual:%14.6f\n",resid_norm);
         printf("Counter:%15d\n",counter);
 	}
+    MPI_Barrier(MPI_COMM_WORLD);
 	return(1);
 }
 
