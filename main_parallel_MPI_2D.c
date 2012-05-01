@@ -467,15 +467,16 @@ double nl_phi_solver(double ni_phi[]) {
        /*for (x = 0; x<nmax; x++) {
             Amatrix_linear[x*nmax + x] = -alpha[x]; 
         }*/
-        int current_dis = displs_Amatrix[rank];
+        /*int current_dis = displs_Amatrix[rank];
         int row = current_dis/nmax;
         int column = current_dis%nmax;
         int diags = 0;
         for (x = 0; x<counts_phi[rank]; x++) {
             for (y = 0; y<nmax; y++) {
                 if (row == column) {
-                    my_sub_Amatrix[x*nmax + y] = -alpha[row];
-                    
+                    my_sub_Amatrix[x*nmax + y] = -alpha[diags];
+                    if (diags == 0) diags = row;
+                    else diags++;
                 }
                 if (column == nmax - 1) {
                     column = 0;
@@ -484,7 +485,38 @@ double nl_phi_solver(double ni_phi[]) {
                     column++;
                 }
             }
+        }*/
+        int current_dis = displs_Amatrix[rank];
+        int row = current_dis/nmax;
+        int column = current_dis%nmax;
+        int first_diag = 0;
+        int first_diag_dis = 0;
+        int first_diag_index = 0;
+        if (column > row) {
+            first_diag = row + 1;
+            first_diag_dis = row + 1;
+            first_diag_index = nmax - column + first_diag_dis; 
+        } else if (column == row) {
+            first_diag = row;
+            first_diag_dis = 0;
+            first_diag_index = 0;
+        } else {
+            first_diag = row;
+            first_diag_dis = row - column;
+            first_diag_index = first_diag_dis;
         }
+        first_diag+= row;
+        int stop = counts_phi[rank];
+        if (first_diag == row+1) {
+            stop = counts_phi[rank] - 1;
+        }
+        //int row = current_dis/nmax;
+        for (x = 0; x<stop; x++) {
+            my_sub_Amatrix[first_diag_index] = -alpha[first_diag];
+            first_diag += 1;
+            first_diag_index += nmax + 1;
+        }
+        
 		//	Implement SOR Solver
         MPI_Bcast(phi_new, nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         //MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, nmax*nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
