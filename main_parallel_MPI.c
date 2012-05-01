@@ -109,6 +109,7 @@ The pseudo-flowchart is in the 'main' part.
 #include "2strminstb.h"	// This is the header file
 //#include <libc.h>
 #include <sys/time.h>
+double *Amatrix_linear;
 int rank,size,numprocs;
 int main () {
 	MPI_Init(NULL, NULL);
@@ -151,6 +152,7 @@ int main () {
 		printf("elapsed time (parallel - MPI (1-D)): %lf\n", elapsed);
 	}
 	MPI_Finalize();
+    free(Amatrix_linear);
 	return EXIT_SUCCESS;	
 }
 
@@ -433,15 +435,17 @@ double update_phi_field(double rho_phi[]) {
 	//	Implement SOR Solution for Phi
 	double phi_new[Lx] = {0}, phi_old[Lx] = {0}, Matrix_Product[Lx] = {0};
 	double tol = 1e-6; double resid[Lx] = {0}, resid_norm = 1;
-	double *Amatrix_linear = malloc(Lx*Lx*sizeof(double));
-	int m, n;
-	int linear_index = 0;
-	for (m = 0; m<Lx; m++) {
-		for (n = 0; n<Lx; n++) {
-			Amatrix_linear[linear_index] = Amatrix[m][n];
-			linear_index++;
-		}
-	}
+	if (Amatrix_linear == NULL) {
+        Amatrix_linear = malloc(Lx*Lx*sizeof(double));
+        int m, n;
+        int linear_index = 0;
+        for (m = 0; m<Lx; m++) {
+            for (n = 0; n<Lx; n++) {
+                Amatrix_linear[linear_index] = Amatrix[m][n];
+                linear_index++;
+            }
+        }
+    }
 	int k,l; double sum_mp, sum_norm, sum_final = 0;
 	int counter = 0;
 	int my_phi_size;
@@ -507,7 +511,7 @@ double update_phi_field(double rho_phi[]) {
 
 	
 	for (i=0; i<Lx; i++) {rho_phi[i] = phi_new[i];}
-	free(Amatrix_linear);
+	//free(Amatrix_linear);
 	free(my_sub_phi);
 	free(my_sub_Amatrix);
 	free(counts_phi);
