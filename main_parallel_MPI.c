@@ -114,7 +114,6 @@ int main () {
 	MPI_Init(NULL, NULL);
  	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	printf("size of world: \n", size);
 	//srand(time(0));
 	// ++++++++++++++++++++++++++++++++
 	// Inputs
@@ -149,7 +148,7 @@ int main () {
 		file1 = fopen("v_th.txt", "w");
 		fprintf(file1,"%f\t%f\t%f\t%d\t%d",v_th,v_da,v_db,Lx,tt);
 		fclose(file1);
-		printf("elapsed time (parallel): %lf\n", elapsed);
+		printf("elapsed time (parallel - MPI (1-D)): %lf\n", elapsed);
 	}
 	MPI_Finalize();
 	return EXIT_SUCCESS;	
@@ -460,7 +459,6 @@ double update_phi_field(double rho_phi[]) {
 	int *counts_Amatrix = malloc(size*sizeof(int));
 	int *displs_phi = malloc(size*sizeof(int));
 	int *displs_Amatrix = malloc(size*sizeof(int));
-    double *my_matrix_prod_sub = malloc((Lx/size)*sizeof(double));
 	int counts_index = 0, dis_index = 0;
 	int max_recv_size_phi = 0;
 	int max_recv_size_Amatrix = 0;
@@ -473,13 +471,14 @@ double update_phi_field(double rho_phi[]) {
 			counts_Amatrix[counts_index] = Lx*Lx - (Lx*Lx/(size))*(size - 1);
 		} 
 	}
+        double *my_matrix_prod_sub = malloc(counts_phi[rank]*sizeof(double));
 	for (dis_index = 0; dis_index < size; dis_index++) {
 		displs_phi[dis_index] = dis_index*counts_phi[0];
 		displs_Amatrix[dis_index] = dis_index*counts_Amatrix[0];
 	}
 	max_recv_size_phi = (counts_phi[size - 1] > counts_phi[0]) ? counts_phi[size - 1] : counts_phi[0];
 	max_recv_size_Amatrix = (counts_Amatrix[size - 1] > counts_Amatrix[0]) ? counts_Amatrix[size - 1]:  counts_Amatrix[0];
-	MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, Lx*Lx, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, max_recv_size_Amatrix, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	while (resid_norm > tol && counter < 1000) {
 		//MPI Seems a poor choice for this loop
 		for (k=0; k<Lx; k++) {

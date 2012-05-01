@@ -3,102 +3,102 @@
 // For CSCI 503 Project
 
 /*
-
-------------Some Physical Review------------
-Plasma: charged particles, e.g., ions, electrons. Ions have positive charge, while electrons have negative charge. Their motions follows the Newton's 2nd Law:
-
-m*a = q*E
-where 'm' is mass, 'a' is dv/dt (acceleration), 'q' is charge, 'E' is electric field (E field).
-
-------------What is the code doing?------------
-In this code, we are tracing the positions of electrons (negatively charged particles). Since the mass of ions are much larger than the mass of electrons, the ions are assumed to be im-mobile (fixed at their locations). So, only electrons are studied.
-
-The problem involved in this code is called "Two-Stream Instability", and the physical description is:
-
-Two streams of electrons are counter-flowing with each other in x-direction (1-D problem), like the following 'figure',
-
-
-Population A		  Population B
--------------->		<--------------
--------------->		<--------------
--------------->		<--------------
-
-and the coordinate system is:
-
-y
-
-^
-|
-|
-|----> x
-
-Since there is no dependence on the y-direction, this problem is 1-D. Like mentioned above, the core part is to trace the position, and the steps/maps are:
-
---> Initially, their positions/velocities are given (input).
---> In order to get the new position, we need to know the new velocity (x += v * delta_t);
---> In order to know the new velocity, we need to know the acceleration (v += a * delta_t);
---> In order to know the acceleration, we need to know the E field (m * a = q * E);
---> In order to know the E field, we need to know the electric potential, Greek letter 'Phi' (E = - d(Phi)/dx);
---> In order to know the electric potential, we need to know the charge density, Greek letter rho (Laplacian of Phi = rho);
---> In order to know the charge density rho, we need to know the positions of particles (so this goes back to the beginning of the cycle);
-
-The solution is time-serial:
-
-	Initial particles position/velocity -->
-
-|------>Get charge density from the positions -->
-|	Solve for Phi -->
-|	Take the derivative of Phi, get E -->
-|	Get acceleration for each particle -->
-|	Get new velocity of each particle -->
-|	Get new position of each particle -->
---------Next time step
-
-The above loop is done until 'steady state' is obtained - continuing the time series, the picture stays the same pattern.
-
-
-------------How to do this in the code?------------
-The simulation is based on a 1-D grid:
-
-+-----+-----+-----+-----+-----+-----+
-
-Where '+' stands for the grid node. Like we mentioned above, the ions are fixed - so their contribution of positive charge are directly defined at the grid node (given as the input). In the code, the Phi (potential), E (E field), and rho (charge density) are defined at the grid node, and the particles information are stored in an long array. So this method is called 'Particle-In-Cell'.
-
-So, in the code, each step is:
-
---Initialize particle position/velocity: This is a large array, many rows, each row stores the position and velocity.
-
---Get the charge density, rho, at the grid node: All the particles contribute their charge to their near nodes. For example, if one particle's position is between node i and i+1, and the charge carried by that particle will be counted onto both node i and node i+1 - with some weight, and the weight is actually the distance (if the particle is nearer to node i, then more portion of the charge is going to be at node i). This is done for all the particles, so if we parallelize this part, there IS a data-dependency problem (the rho at each node is a sum, while this sum is from all the particles nearby).
-
---Solve for Phi from charge density rho. This is matrix solver problem - basically, AX = B, solve for X. In this code, the size of the matrix is based on how many nodes we have (i.e., how do we discretize the 1-D simulation domain). We can also think about this part for parallelism.
-
---Get E from Phi - just take the derivative.
-
---Get acceleration for each particle, in the m*a = q*E equation, only a is unknow now - note here, E is interpolated between two nodes. For example, if the particle's current position is at the middle of two nodes, then the E field it feels is the average of the E's of the two nodes. This is done for all the particles.
-
---Get new velocity and new position. This is done for all the particles.
-
-
-The solution loop is:
-
-		Initialize particle position/velocity -->
-
-	----->	Get the charge at each grid node (electrons carry charges) -->
-	|
-	|	Solve the Phi field from AX = B (this is a matrix solver problem) -->
-	|
-	|	Get the E field from Phi, E = -d(Phi)/dx -->
-	|
-	-------	Update particle velocity and position ( m*a = q*E, and a = dv/dt; so v += a*dt; x += v*dt ) -->
-
-
-
-
-
-
-The pseudo-flowchart is in the 'main' part.
-
-*/
+ 
+ ------------Some Physical Review------------
+ Plasma: charged particles, e.g., ions, electrons. Ions have positive charge, while electrons have negative charge. Their motions follows the Newton's 2nd Law:
+ 
+ m*a = q*E
+ where 'm' is mass, 'a' is dv/dt (acceleration), 'q' is charge, 'E' is electric field (E field).
+ 
+ ------------What is the code doing?------------
+ In this code, we are tracing the positions of electrons (negatively charged particles). Since the mass of ions are much larger than the mass of electrons, the ions are assumed to be im-mobile (fixed at their locations). So, only electrons are studied.
+ 
+ The problem involved in this code is called "Two-Stream Instability", and the physical description is:
+ 
+ Two streams of electrons are counter-flowing with each other in x-direction (1-D problem), like the following 'figure',
+ 
+ 
+ Population A		  Population B
+ -------------->		<--------------
+ -------------->		<--------------
+ -------------->		<--------------
+ 
+ and the coordinate system is:
+ 
+ y
+ 
+ ^
+ |
+ |
+ |----> x
+ 
+ Since there is no dependence on the y-direction, this problem is 1-D. Like mentioned above, the core part is to trace the position, and the steps/maps are:
+ 
+ --> Initially, their positions/velocities are given (input).
+ --> In order to get the new position, we need to know the new velocity (x += v * delta_t);
+ --> In order to know the new velocity, we need to know the acceleration (v += a * delta_t);
+ --> In order to know the acceleration, we need to know the E field (m * a = q * E);
+ --> In order to know the E field, we need to know the electric potential, Greek letter 'Phi' (E = - d(Phi)/dx);
+ --> In order to know the electric potential, we need to know the charge density, Greek letter rho (Laplacian of Phi = rho);
+ --> In order to know the charge density rho, we need to know the positions of particles (so this goes back to the beginning of the cycle);
+ 
+ The solution is time-serial:
+ 
+ Initial particles position/velocity -->
+ 
+ |------>Get charge density from the positions -->
+ |	Solve for Phi -->
+ |	Take the derivative of Phi, get E -->
+ |	Get acceleration for each particle -->
+ |	Get new velocity of each particle -->
+ |	Get new position of each particle -->
+ --------Next time step
+ 
+ The above loop is done until 'steady state' is obtained - continuing the time series, the picture stays the same pattern.
+ 
+ 
+ ------------How to do this in the code?------------
+ The simulation is based on a 1-D grid:
+ 
+ +-----+-----+-----+-----+-----+-----+
+ 
+ Where '+' stands for the grid node. Like we mentioned above, the ions are fixed - so their contribution of positive charge are directly defined at the grid node (given as the input). In the code, the Phi (potential), E (E field), and rho (charge density) are defined at the grid node, and the particles information are stored in an long array. So this method is called 'Particle-In-Cell'.
+ 
+ So, in the code, each step is:
+ 
+ --Initialize particle position/velocity: This is a large array, many rows, each row stores the position and velocity.
+ 
+ --Get the charge density, rho, at the grid node: All the particles contribute their charge to their near nodes. For example, if one particle's position is between node i and i+1, and the charge carried by that particle will be counted onto both node i and node i+1 - with some weight, and the weight is actually the distance (if the particle is nearer to node i, then more portion of the charge is going to be at node i). This is done for all the particles, so if we parallelize this part, there IS a data-dependency problem (the rho at each node is a sum, while this sum is from all the particles nearby).
+ 
+ --Solve for Phi from charge density rho. This is matrix solver problem - basically, AX = B, solve for X. In this code, the size of the matrix is based on how many nodes we have (i.e., how do we discretize the 1-D simulation domain). We can also think about this part for parallelism.
+ 
+ --Get E from Phi - just take the derivative.
+ 
+ --Get acceleration for each particle, in the m*a = q*E equation, only a is unknow now - note here, E is interpolated between two nodes. For example, if the particle's current position is at the middle of two nodes, then the E field it feels is the average of the E's of the two nodes. This is done for all the particles.
+ 
+ --Get new velocity and new position. This is done for all the particles.
+ 
+ 
+ The solution loop is:
+ 
+ Initialize particle position/velocity -->
+ 
+ ----->	Get the charge at each grid node (electrons carry charges) -->
+ |
+ |	Solve the Phi field from AX = B (this is a matrix solver problem) -->
+ |
+ |	Get the E field from Phi, E = -d(Phi)/dx -->
+ |
+ -------	Update particle velocity and position ( m*a = q*E, and a = dv/dt; so v += a*dt; x += v*dt ) -->
+ 
+ 
+ 
+ 
+ 
+ 
+ The pseudo-flowchart is in the 'main' part.
+ 
+ */
 
 
 
@@ -106,14 +106,11 @@ The pseudo-flowchart is in the 'main' part.
 #include <stdlib.h>
 #include <math.h>
 #include "2strminstb.h"	// This is the header file
-#include <libc.h>
+#include "libc.h"
 #include <sys/time.h>
-double phi_new[NMAX];
-double phi_old[NMAX];
-double Matrix_Product[NMAX];
-double resid[NMAX];
-
+#include <omp.h>
 int main () {
+    omp_set_num_threads(16);
 	//srand(time(0));
 	// ++++++++++++++++++++++++++++++++
 	// Inputs
@@ -126,19 +123,19 @@ int main () {
 	
 	// Setup the domain
 	setup_domain();
-
+    
 	// Form the coefficients of AX = B when solving Phi
 	finite_diff_matrix();
-
+    
 	// Get the charge on each grid node, and solve for Phi, and get E field
 	// %%%%%%%%%%%%% There is a data-dependency when getting the charge density as I mentioned above %%%%%%%%%%%%%%%%%
 	nodecharge_efield();
-
+    
 	// Update the particle velocity/position
 	// %%%%%%%%%%%%% This is the part we need to parallelize %%%%%%%%%%%%%%%%%
     double seconds = read_timer();
-	periodic_move_node();
-    double elapsed = read_timer() - seconds;
+    periodic_move_node();
+	double elapsed = read_timer() - seconds;
 	// Output checkpoint data for post-processing
 	output();
 	vel_temp();	// velocity and temperature (temperature is related to random velocities)
@@ -148,24 +145,24 @@ int main () {
 	file1 = fopen("v_th.txt", "w");
 	fprintf(file1,"%f\t%f\t%f\t%d\t%d",v_th,v_da,v_db,Lx,tt);
 	fclose(file1);
-	printf("elapsed time (parallel): %lf\n", elapsed);
+	printf("elapsed time (serial): %lf\n", elapsed);
 	return EXIT_SUCCESS;	
 }
 
 
 double read_timer()
 {
-  static int initialized = 0;
-  static struct timeval start;
-  struct timeval end;
-  if( !initialized ) {
-    gettimeofday( &start, NULL );
-    initialized = 1;
-  }
-
-  gettimeofday( &end, NULL );
-
-  return (end.tv_sec - start.tv_sec) + 1.0e-6 * (end.tv_usec - start.tv_usec);
+    static int initialized = 0;
+    static struct timeval start;
+    struct timeval end;
+    if( !initialized ) {
+        gettimeofday( &start, NULL );
+        initialized = 1;
+    }
+    
+    gettimeofday( &end, NULL );
+    
+    return (end.tv_sec - start.tv_sec) + 1.0e-6 * (end.tv_usec - start.tv_usec);
 }
 
 void setup_domain() {
@@ -182,7 +179,7 @@ void setup_domain() {
 	
 	for (i=0; i<Lx; i++) {
 		for (k=0; k<ppc; k++) {
-
+            
 			// Initialize Population A
 			x_pos = i*dx + rng(a);
 			vrand1 = sqrt(-log(1 - .9999999*rng(a)));
@@ -198,7 +195,7 @@ void setup_domain() {
 			Part_Matrix_A[0][count][5] = v_y;
 			Part_Matrix_A[0][count][6] = v_z;
 			
-
+            
 			// Initialize Population B
 			x_pos = i*dx + rng(a);
 			vrand1 = sqrt(-log(1 - .9999999*rng(a)));
@@ -227,7 +224,7 @@ void setup_domain() {
 	printf("# of Particles:\t%8d\n",2*Npart);
 	printf("Time Increment:\t%8.2f\n",dt);
 	printf("Final Time Step:\t%8d\n",tt);
-
+    
 }
 
 void finite_diff_matrix() {
@@ -240,7 +237,7 @@ void finite_diff_matrix() {
 		else if (i == Lx-1) {Amatrix[i][i] = -2; Amatrix[i][i-1] = 1; Amatrix[i][0] = 1;}
 		else {Amatrix[i][i] = -2; Amatrix[i][i+1] = 1; Amatrix[i][i-1] = 1;}
 	}
-
+    
 	
 	FILE *file1;
 	file1 = fopen("Amatrix.txt", "w");
@@ -254,98 +251,46 @@ void finite_diff_matrix() {
 // Get the charge on each grid node, solve for E field
 void nodecharge_efield() {
 	
+	int i,j,k,m,n,ic,ef;
+	double Area1 = 0, Area2 = 0, Area3 = 0, Area4 = 0;
+	double rho[Lx+1],pef[Lx+1];
+	for (k=0; k<Npart; k++) {
+		i = floor(Part_Matrix_A[0][k][1]); m = ceil(Part_Matrix_A[0][k][1]);
+		j = floor(Part_Matrix_B[0][k][1]); n = ceil(Part_Matrix_B[0][k][1]);
+		
+		Area1 = (m - Part_Matrix_A[0][k][1]); Area2 = (Part_Matrix_A[0][k][1] - i);
+		Area3 = (n - Part_Matrix_B[0][k][1]); Area4 = (Part_Matrix_B[0][k][1] - j);
+		
+		chargenodeA[0][i] += Area1;
+		chargenodeA[0][m] += Area2;
+		chargenodeB[0][j] += Area3;
+		chargenodeB[0][n] += Area4;}
 	
-    int i,j,k,m,n,ic,ef;
-    double Area1 = 0, Area2 = 0, Area3 = 0, Area4 = 0;
-    double rho[Lx+1],pef[Lx+1];
-    int my_id;
-    double pcn;
-    //#pragma omp parallel shared(Npart,i,j,m,n,Area1,Area2,Area3,Area4,pcn) private(k,my_id,ic,ef)
-    //{
-    //my_id = omp_get_thread_num();
-    //#pragma omp for
-    for (k=0; k<Npart; k++) {
-        
-        i = floor(Part_Matrix_A[0][k][1]); 
-        
-        m = ceil(Part_Matrix_A[0][k][1]);
-        
-        j = floor(Part_Matrix_B[0][k][1]); 
-        
-        n = ceil(Part_Matrix_B[0][k][1]);
-        
-        Area1 = (m - Part_Matrix_A[0][k][1]); 
-        
-        Area2 = (Part_Matrix_A[0][k][1] - i);
-        
-        Area3 = (n - Part_Matrix_B[0][k][1]); 
-        
-        Area4 = (Part_Matrix_B[0][k][1] - j);
-        
-        chargenodeA[0][i] += Area1;
-        
-        chargenodeA[0][m] += Area2;
-        
-        chargenodeB[0][j] += Area3;
-        
-        chargenodeB[0][n] += Area4;
-        //}
-    }
-    //if(my_id == 0){
-    chargenodeA[0][0] = chargenodeA[0][0] + chargenodeA[0][Lx];
-    chargenodeA[0][Lx] = chargenodeA[0][0];
-    chargenodeB[0][0] = chargenodeB[0][0] + chargenodeB[0][Lx];
-    chargenodeB[0][Lx] = chargenodeB[0][0];
-    //}   
-    //if(my_id == 0){
-    pcn = .5/(double)ppc;
-    //}
-    //#pragma omp barrier
-    //printf("pcn = %f\n", pcn);
-    
-    
-    //printf("myid = %d, chargenodeA[0][0]=%f,chargenodeA[0][Lx]=%f,chargenodeB[0][0]=%f,chargenodeB[0][Lx]=%f\n",my_id,chargenodeA[0][0],chargenodeA[0][Lx],chargenodeB[0][0],chargenodeB[0][Lx]); 
-    //#pragma omp for 
-#pragma omp parallel shared(normchargenodeA, normchargenodeB, chargenodeA, chargenodeB,normdiff,rho) private(ic,my_id)
-    {
-        my_id = omp_get_thread_num();
-#pragma omp for
-        for (ic=0; ic<=Lx; ic++) {
-            //printf("my_id = %d.\n",my_id);
-            //printf("id = %d.\n", my_id);
-            normchargenodeA[0][ic] = pcn*chargenodeA[0][ic];
-            normchargenodeB[0][ic] = pcn*chargenodeB[0][ic];
-            normdiff[0][ic] = 1 - normchargenodeA[0][ic] - normchargenodeB[0][ic];
-            rho[ic] = normdiff[0][ic];
-        }
-        
-        //#pragma omp barrier
-        if(my_id == 0){
-            printf("\nTimestep:\t%4d\n",0);
-            update_phi_field(rho);
-        }
-#pragma omp barrier
-        
-        //#pragma omp for
-#pragma omp for
-        for (ef=0; ef<Lx; ef++) {
-            phi[0][ef] = rho[ef];
-            pef[ef] = phi[0][ef];
-        }
-        
-        if(my_id == 0){    
-            update_E_field(pef);
-        }
-#pragma omp barrier
-        
-#pragma omp for
-        for (ef=0; ef<Lx; ef++) {
-            efield[0][ef] = pef[ef];
-        }
-    }//end of openmp
-    phi[0][Lx] = phi[0][0];
-    efield[0][Lx] = efield[0][0];
-    // }// end of openmp
+	chargenodeA[0][0] = chargenodeA[0][0] + chargenodeA[0][Lx];
+	chargenodeA[0][Lx] = chargenodeA[0][0];
+	chargenodeB[0][0] = chargenodeB[0][0] + chargenodeB[0][Lx];
+	chargenodeB[0][Lx] = chargenodeB[0][0];
+	
+	double pcn = .5/(double)ppc;
+	for (ic=0; ic<=Lx; ic++) {
+		normchargenodeA[0][ic] = pcn*chargenodeA[0][ic];
+		normchargenodeB[0][ic] = pcn*chargenodeB[0][ic];
+		normdiff[0][ic] = 1 - normchargenodeA[0][ic] - normchargenodeB[0][ic];
+		rho[ic] = normdiff[0][ic];}
+	
+	printf("\nTimestep:\t%4d\n",0);
+	
+	update_phi_field(rho);
+	for (ef=0; ef<Lx; ef++) {
+		phi[0][ef] = rho[ef];
+		pef[ef] = phi[0][ef];}
+	
+	update_E_field(pef);
+	for (ef=0; ef<Lx; ef++) {
+		efield[0][ef] = pef[ef];}
+	
+	phi[0][Lx] = phi[0][0];
+	efield[0][Lx] = efield[0][0];
 	
 }
 
@@ -362,73 +307,68 @@ void periodic_move_node() {
 	double Area1 = 0, Area2 = 0, Area3 = 0, Area4 = 0;
 	double pcn = .5/(double)ppc;
 	double rho[Lx+1],pef[Lx+1];
-    omp_set_num_threads(8);
+	
 	for (ii=1; ii<tt; ii++) {// For each time step - we can't parallelize the time-serial work...
-
-    #pragma omp parallel default(none) shared(Part_Matrix_A, Part_Matrix_B, dt, efield, Npart, ii, ddx) private(xposa,xposb,xposnewa,xposnewb,v_xa,v_xnewa,v_xb,v_xnewb,v_ya,v_za,v_yb,v_zb, ef_inta, ef_intb, i, j, kk, m, n)
-        {
-            int my_id = omp_get_thread_num();
-            int num_threads = omp_get_num_threads();
-            int my_num_elements = (Npart)/num_threads;
-            int my_first_element = my_id*((Npart)/num_threads);
-            if (my_id == (num_threads - 1)) {
-                my_num_elements += Npart - num_threads*(Npart/num_threads);
-            } 
-            // ===============================================
-            for (kk=my_first_element; kk<my_first_element + my_num_elements; kk++) { // @@@@@@@@@@@@@@@@@ Note the starting and ending index, 0 --> Npart, parallelize this
+        
+        
+        
+		// ===============================================
+		for (kk=0; kk<Npart; kk++) { // @@@@@@@@@@@@@@@@@ Note the starting and ending index, 0 --> Npart, parallelize this
             //	Electron Population A
-                xposa = Part_Matrix_A[ii-1][kk][1];
-                v_xa = Part_Matrix_A[ii-1][kk][4];
-                v_ya = Part_Matrix_A[ii-1][kk][5];
-                v_za = Part_Matrix_A[ii-1][kk][6];
+			xposa = Part_Matrix_A[ii-1][kk][1];
+			v_xa = Part_Matrix_A[ii-1][kk][4];
+			v_ya = Part_Matrix_A[ii-1][kk][5];
+			v_za = Part_Matrix_A[ii-1][kk][6];
 			
             //	Move Particles
-                i = floor(xposa); m = ceil(xposa);
-                ef_inta = (efield[ii-1][m] - efield[ii-1][i])*(xposa - i)*ddx + efield[ii-1][i];
-                v_xnewa = v_xa - ef_inta*dt;
-                xposnewa = xposa + v_xnewa*dt;
+			i = floor(xposa); m = ceil(xposa);
+			ef_inta = (efield[ii-1][m] - efield[ii-1][i])*(xposa - i)*ddx + efield[ii-1][i];
+			v_xnewa = v_xa - ef_inta*dt;
+			xposnewa = xposa + v_xnewa*dt;
 			
             //	Update Particle Positions and Velocities
-                Part_Matrix_A[ii][kk][0] = Part_Matrix_A[ii-1][kk][0];
-                Part_Matrix_A[ii][kk][1] = xposnewa;
-                Part_Matrix_A[ii][kk][4] = v_xnewa;
-                Part_Matrix_A[ii][kk][5] = v_ya;
-                Part_Matrix_A[ii][kk][6] = v_za;
+			Part_Matrix_A[ii][kk][0] = Part_Matrix_A[ii-1][kk][0];
+			Part_Matrix_A[ii][kk][1] = xposnewa;
+			Part_Matrix_A[ii][kk][4] = v_xnewa;
+			Part_Matrix_A[ii][kk][5] = v_ya;
+			Part_Matrix_A[ii][kk][6] = v_za;
 			
             //	Periodic Particle Position
-                if (Part_Matrix_A[ii][kk][1] < 0) {
-                    Part_Matrix_A[ii][kk][1] = Part_Matrix_A[ii][kk][1] + Lx;}
-                if (Part_Matrix_A[ii][kk][1] > Lx) {
-                    Part_Matrix_A[ii][kk][1] = Part_Matrix_A[ii][kk][1] - Lx;}
-		
+			if (Part_Matrix_A[ii][kk][1] < 0) {
+				Part_Matrix_A[ii][kk][1] = Part_Matrix_A[ii][kk][1] + Lx;}
+			if (Part_Matrix_A[ii][kk][1] > Lx) {
+				Part_Matrix_A[ii][kk][1] = Part_Matrix_A[ii][kk][1] - Lx;}
+            
             //	Electron Population B
-                xposb = Part_Matrix_B[ii-1][kk][1];
-                v_xb = Part_Matrix_B[ii-1][kk][4];
-                v_yb = Part_Matrix_B[ii-1][kk][5];
-                v_zb = Part_Matrix_B[ii-1][kk][6];
+			xposb = Part_Matrix_B[ii-1][kk][1];
+			v_xb = Part_Matrix_B[ii-1][kk][4];
+			v_yb = Part_Matrix_B[ii-1][kk][5];
+			v_zb = Part_Matrix_B[ii-1][kk][6];
 			
             //	Move Particles
-                j = floor(xposb); n = ceil(xposb);
-                ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
-                v_xnewb = v_xb - ef_intb*dt;
-                xposnewb = xposb + v_xnewb*dt;
+			j = floor(xposb); n = ceil(xposb);
+			ef_intb = (efield[ii-1][n] - efield[ii-1][j])*(xposb - j)*ddx + efield[ii-1][j];
+			v_xnewb = v_xb - ef_intb*dt;
+			xposnewb = xposb + v_xnewb*dt;
 			
             //	Update Particle Positions and Velocities
-                Part_Matrix_B[ii][kk][0] = Part_Matrix_B[ii-1][kk][0];
-                Part_Matrix_B[ii][kk][1] = xposnewb;
-                Part_Matrix_B[ii][kk][4] = v_xnewb;
-                Part_Matrix_B[ii][kk][5] = v_yb;
-                Part_Matrix_B[ii][kk][6] = v_zb;
+			Part_Matrix_B[ii][kk][0] = Part_Matrix_B[ii-1][kk][0];
+			Part_Matrix_B[ii][kk][1] = xposnewb;
+			Part_Matrix_B[ii][kk][4] = v_xnewb;
+			Part_Matrix_B[ii][kk][5] = v_yb;
+			Part_Matrix_B[ii][kk][6] = v_zb;
 			
             //	Periodic Particle Position
-                if (Part_Matrix_B[ii][kk][1] < 0) {
-                    Part_Matrix_B[ii][kk][1] = Part_Matrix_B[ii][kk][1] + Lx;}
-                if (Part_Matrix_B[ii][kk][1] > Lx) {
-                    Part_Matrix_B[ii][kk][1] = Part_Matrix_B[ii][kk][1] - Lx;}
-            }
-            // Parallelize the bounded part, kk = 0 --> Npart
-            // ===============================================
-        }
+			if (Part_Matrix_B[ii][kk][1] < 0) {
+				Part_Matrix_B[ii][kk][1] = Part_Matrix_B[ii][kk][1] + Lx;}
+			if (Part_Matrix_B[ii][kk][1] > Lx) {
+				Part_Matrix_B[ii][kk][1] = Part_Matrix_B[ii][kk][1] - Lx;}
+		}
+		// Parallelize the bounded part, kk = 0 --> Npart
+		// ===============================================
+        
+        
+        
 		
 		//	Update Node Charge
 		for (kk=0; kk<Npart; kk++) {
@@ -479,7 +419,6 @@ void periodic_move_node() {
 
 double update_phi_field(double rho_phi[]) {
 	
-	
 	//	Construct B Matrix
 	int i; double Bmatrix[mad];
 	for (i=0; i<Lx; i++) {
@@ -494,7 +433,7 @@ double update_phi_field(double rho_phi[]) {
 	while (resid_norm > tol && counter < 1000) {
 		for (k=0; k<Lx; k++) {phi_old[k] = phi_new[k];}
         
-        //#pragma omp parallel for default(shared) private(sum_mp, sum_norm, k, resid_norm) 
+#pragma omp parallel for default(shared) private(sum_mp, k, l, sum_norm)
 		for (k=0; k<Lx; k++) {
 			sum_mp = 0; sum_norm = 0;
 			for (l=0; l<Lx; l++) {sum_mp += (double)Amatrix[k][l]*phi_new[l];}
@@ -515,7 +454,7 @@ double update_phi_field(double rho_phi[]) {
 }
 
 double update_E_field(double phi_ef[]) {
-
+    
 	//	Differentiate for E Field
 	int i; double eff[Lx+1];
 	double ddx = 1/dx;

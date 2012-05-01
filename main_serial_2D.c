@@ -22,8 +22,8 @@ int main () {
     dx = 1; dy = 1; delta2 = dx*dx;
 	imax = Lx - 1; jmax = Ly;
 	nmax = imax*jmax;
-	ppc = 1200;
-    //ppc = 200; 
+	//ppc = 1200;
+    ppc = 200; 
     LeftBC = 0; RightBC = -10;
     pcn = 1/(double)ppc;
 	Npart = Lx*Ly*ppc;
@@ -32,7 +32,7 @@ int main () {
 	nt = .5;
 	dt = nt/(v_o*(1 + erf(v_th/v_o)));
 	//finaltime = 50;
-	finaltime = 20;
+	finaltime = 10;
 	omega = 1;
 	
 	initial_conditions();

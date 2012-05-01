@@ -25,8 +25,8 @@ int main () {
     dx = 1; dy = 1; delta2 = dx*dx;
 	imax = Lx - 1; jmax = Ly;
 	nmax = imax*jmax;
-	ppc = 1200;
-    //ppc = 200; 
+	//ppc = 1200;
+    ppc = 200; 
     LeftBC = 0; RightBC = -10;
     pcn = 1/(double)ppc;
 	Npart = Lx*Ly*ppc;
@@ -35,7 +35,7 @@ int main () {
 	nt = .5;
 	dt = nt/(v_o*(1 + erf(v_th/v_o)));
 	//finaltime = 50;
-	finaltime = 20;
+	finaltime = 10;
 	omega = 1;
 	
 	initial_conditions();
@@ -48,7 +48,7 @@ int main () {
         file1 = fopen("Sys_Cond.txt", "w");
         fprintf(file1, "%d\t%d\t%d\t%d\t%d",Lx,Ly,dx,dy,finaltime);
         fclose(file1);
-        printf("Elapsed time (serial): %f seconds\n", elapsed); 
+        printf("Elapsed time (parallel (MPI-2D)): %f seconds\n", elapsed); 
     }
     MPI_Finalize();
     return EXIT_SUCCESS;
@@ -400,16 +400,29 @@ double nl_phi_solver(double ni_phi[]) {
 	int i,j,k,m,n; int counter = 0;
 	double sum_mp,sum_norm, sum_final; double resid_norm = 1,tol = 1e-3;
 	
-	double Bmatrix[AMIN];
-	double phi_new[AMIN] = {0},phi_old[AMIN] = {0};
-	double alpha[AMIN],beta[AMIN],Matrix_Product[AMIN],resid[AMIN];
+	//double Bmatrix[AMIN];
+	//double phi_new[AMIN] = {0},phi_old[AMIN] = {0};
+	//double alpha[AMIN],beta[AMIN],Matrix_Product[AMIN],resid[AMIN];
+    //double alpha[AMIN], beta[AMIN];
+    double *Bmatrix = malloc(nmax*sizeof(double));
+    double *alpha = malloc(nmax*sizeof(double));
+    double *beta = malloc(nmax*sizeof(double));
+    double *phi_new = malloc(nmax*sizeof(double));
+    double *phi_old = malloc(nmax*sizeof(double));
+    double *Matrix_Product = malloc(nmax*nmax*sizeof(double));
+    double *resid = malloc(nmax*sizeof(double));
 	double *Amatrix_linear = malloc(nmax*nmax*sizeof(double));
+    int ind = 0;
+    for (ind = 0; ind < nmax; ind++) {
+        phi_new[ind] = 0.0;
+        phi_old[ind] = 0.0;
+    }
 	int q, r;
 	int linear_index = 0;
 	for (q = 0;q<nmax; q++) {
 		for (r = 0; r<nmax; r++) {
-			Amatrix_linear[linear_index] = Amatrix[q][r];
-			linear_index++;
+            Amatrix_linear[linear_index] = Amatrix[q][r];
+            linear_index++;
 		}
 	}
 	int my_phi_size;
@@ -426,7 +439,6 @@ double nl_phi_solver(double ni_phi[]) {
 	int *counts_Amatrix = malloc(size*sizeof(int));
 	int *displs_phi = malloc(size*sizeof(int));
 	int *displs_Amatrix = malloc(size*sizeof(int));
-    double *my_matrix_prod_sub = malloc((nmax/size)*sizeof(double));
 	int counts_index = 0, dis_index = 0;
 	int max_recv_size_phi = 0;
 	int max_recv_size_Amatrix = 0;
@@ -443,9 +455,13 @@ double nl_phi_solver(double ni_phi[]) {
 		displs_phi[dis_index] = dis_index*counts_phi[0];
 		displs_Amatrix[dis_index] = dis_index*counts_Amatrix[0];
 	}
+        double *my_matrix_prod_sub = malloc((counts_phi[rank])*sizeof(double)); 
+    //printf("nmax: %i\n", nmax);
+    //printf("counts phi: %i \n %i \n %i \n %i \n %i\n", counts_phi[0], counts_phi[1], counts_phi[2], counts_phi[3], counts_phi[4]);
+    //printf("counts Amatrix: %i \n %i \n %i \n %i \n %i\n", counts_Amatrix[0], counts_Amatrix[1], counts_Amatrix[2], counts_Amatrix[3], counts_Amatrix[4]);
+    //printf("displacements phi: \n %i \n %i \n %i \n %i \n %i \n", displs_phi[0], displs_phi[1], displs_phi[2], displs_phi[3], displs_phi[4]);
 	max_recv_size_phi = (counts_phi[size - 1] > counts_phi[0]) ? counts_phi[size - 1] : counts_phi[0];
 	max_recv_size_Amatrix = (counts_Amatrix[size - 1] > counts_Amatrix[0]) ? counts_Amatrix[size - 1]:  counts_Amatrix[0];
-	MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, max_recv_size_Amatrix, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	while (resid_norm > tol) {
 		//	Update Phi, Alpha, Beta
 		for (k=0; k<nmax; k++) {
@@ -460,9 +476,17 @@ double nl_phi_solver(double ni_phi[]) {
 				if (i == 0) {Bmatrix[k] = delta2*beta[k] - LeftBC;}
 				else if (i == imax-1) {Bmatrix[k] = delta2*beta[k] - RightBC;}
 				else {Bmatrix[k] = delta2*beta[k];}}}
+        int q, r;
+        int linear_index = 0;
+        for (q = 0;q<nmax; q++) {
+            for (r = 0; r<nmax; r++) {
+                Amatrix_linear[linear_index] = Amatrix[q][r];
+                linear_index++;
+            }
+        }
 		//	Implement SOR Solver
         MPI_Bcast(phi_new, nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        
+        MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, nmax*nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         for (m=0; m<counts_phi[rank]; m++) {
             sum_mp = 0; sum_norm = 0;
             for (n=0; n<nmax; n++) {
@@ -470,7 +494,12 @@ double nl_phi_solver(double ni_phi[]) {
             }
             my_matrix_prod_sub[m] = sum_mp;
         }
-        MPI_Gatherv(my_matrix_prod_sub, counts_phi[rank], MPI_DOUBLE, Matrix_Product, counts_phi, displs_phi, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        /*for (m=0; m<nmax; m++) {
+			sum_mp = 0; sum_norm = 0;
+			for (n=0; n<nmax; n++) {
+				sum_mp += Amatrix[m][n]*phi_new[n];}
+			Matrix_Product[m] = sum_mp;}*/
+       MPI_Gatherv(my_matrix_prod_sub, counts_phi[rank], MPI_DOUBLE, Matrix_Product, counts_phi, displs_phi, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         
 		for (k=0; k<nmax; k++) {
 			resid[k] = Matrix_Product[k] - Bmatrix[k];
@@ -483,11 +512,18 @@ double nl_phi_solver(double ni_phi[]) {
 	for (k=0; k<nmax; k++) {
 		ni_phi[k] = phi_new[k];}
     free(Amatrix_linear);
+    free(Matrix_Product);
+    free(resid);
 	free(my_sub_Amatrix);
 	free(counts_phi);
 	free(counts_Amatrix);
 	free(displs_phi);
 	free(displs_Amatrix);
+    free(phi_new);
+    free(Bmatrix);
+    free(alpha);
+    free(beta);
+    free(phi_old);
     free(my_matrix_prod_sub);
     if (rank == 0) {
         printf("\nTolerance:%13.6f\n",tol);
