@@ -398,7 +398,7 @@ void outputs() {
 
 double nl_phi_solver(double ni_phi[]) {
 	
-	int i,j,k,m,n; int counter = 0;
+	int i,j,k,m,n,x,y; int counter = 0;
 	double sum_mp,sum_norm, sum_final; double resid_norm = 1,tol = 1e-3;
 	
 	double Bmatrix[AMIN];
@@ -460,13 +460,34 @@ double nl_phi_solver(double ni_phi[]) {
 		for (j=0; j<jmax; j++) {
 			for (i=0; i<imax; i++) {
 				k = imax*j + i;
-				Amatrix_linear[k*nmax+k] = -alpha[k];
+				//Amatrix_linear[k*nmax+k] = -alpha[k];
 				if (i == 0) {Bmatrix[k] = delta2*beta[k] - LeftBC;}
 				else if (i == imax-1) {Bmatrix[k] = delta2*beta[k] - RightBC;}
 				else {Bmatrix[k] = delta2*beta[k];}}}
+       /*for (x = 0; x<nmax; x++) {
+            Amatrix_linear[x*nmax + x] = -alpha[x]; 
+        }*/
+        int current_dis = displs_Amatrix[rank];
+        int row = current_dis/nmax;
+        int column = current_dis%nmax;
+        int diags = 0;
+        for (x = 0; x<counts_phi[rank]; x++) {
+            for (y = 0; y<nmax; y++) {
+                if (row == column) {
+                    my_sub_Amatrix[x*nmax + y] = -alpha[row];
+                    
+                }
+                if (column == nmax - 1) {
+                    column = 0;
+                    row++;
+                } else {
+                    column++;
+                }
+            }
+        }
 		//	Implement SOR Solver
         MPI_Bcast(phi_new, nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, nmax*nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        //MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, nmax*nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         for (m=0; m<counts_phi[rank]; m++) {
             sum_mp = 0; sum_norm = 0;
             for (n=0; n<nmax; n++) {
