@@ -401,23 +401,10 @@ double nl_phi_solver(double ni_phi[]) {
 	int i,j,k,m,n; int counter = 0;
 	double sum_mp,sum_norm, sum_final; double resid_norm = 1,tol = 1e-3;
 	
-	//double Bmatrix[AMIN];
-	//double phi_new[AMIN] = {0},phi_old[AMIN] = {0};
-	//double alpha[AMIN],beta[AMIN],Matrix_Product[AMIN],resid[AMIN];
-    //double alpha[AMIN], beta[AMIN];
-    double *Bmatrix = malloc(nmax*sizeof(double));
-    double *alpha = malloc(nmax*sizeof(double));
-    double *beta = malloc(nmax*sizeof(double));
-    double *phi_new = malloc(nmax*sizeof(double));
-    double *phi_old = malloc(nmax*sizeof(double));
-    double *Matrix_Product = malloc(nmax*nmax*sizeof(double));
-    double *resid = malloc(nmax*sizeof(double));
+	double Bmatrix[AMIN];
+	double phi_new[AMIN] = {0},phi_old[AMIN] = {0};
+	double alpha[AMIN],beta[AMIN],Matrix_Product[AMIN],resid[AMIN];
 	double *Amatrix_linear = malloc(nmax*nmax*sizeof(double));
-    int ind = 0;
-    for (ind = 0; ind < nmax; ind++) {
-        phi_new[ind] = 0.0;
-        phi_old[ind] = 0.0;
-    }
 	int q, r;
 	int linear_index = 0;
 	for (q = 0;q<nmax; q++) {
@@ -487,11 +474,6 @@ double nl_phi_solver(double ni_phi[]) {
             }
             my_matrix_prod_sub[m] = sum_mp;
         }
-        /*for (m=0; m<nmax; m++) {
-			sum_mp = 0; sum_norm = 0;
-			for (n=0; n<nmax; n++) {
-				sum_mp += Amatrix[m][n]*phi_new[n];}
-			Matrix_Product[m] = sum_mp;}*/
        MPI_Gatherv(my_matrix_prod_sub, counts_phi[rank], MPI_DOUBLE, Matrix_Product, counts_phi, displs_phi, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         
 		for (k=0; k<nmax; k++) {
@@ -505,18 +487,11 @@ double nl_phi_solver(double ni_phi[]) {
 	for (k=0; k<nmax; k++) {
 		ni_phi[k] = phi_new[k];}
     free(Amatrix_linear);
-    free(Matrix_Product);
-    free(resid);
 	free(my_sub_Amatrix);
 	free(counts_phi);
 	free(counts_Amatrix);
 	free(displs_phi);
 	free(displs_Amatrix);
-    free(phi_new);
-    free(Bmatrix);
-    free(alpha);
-    free(beta);
-    free(phi_old);
     free(my_matrix_prod_sub);
     if (rank == 0) {
         printf("\nTolerance:%13.6f\n",tol);
