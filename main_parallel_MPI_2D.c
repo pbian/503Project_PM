@@ -51,6 +51,7 @@ int main () {
         printf("Elapsed time (parallel (MPI-2D)): %f seconds\n", elapsed); 
     }
     MPI_Finalize();
+    printf("Done\n");
     return EXIT_SUCCESS;
 }
 
@@ -472,18 +473,10 @@ double nl_phi_solver(double ni_phi[]) {
 		for (j=0; j<jmax; j++) {
 			for (i=0; i<imax; i++) {
 				k = imax*j + i;
-				Amatrix[k][k] = -alpha[k];
+				Amatrix_linear[k*nmax+k] = -alpha[k];
 				if (i == 0) {Bmatrix[k] = delta2*beta[k] - LeftBC;}
 				else if (i == imax-1) {Bmatrix[k] = delta2*beta[k] - RightBC;}
 				else {Bmatrix[k] = delta2*beta[k];}}}
-        int q, r;
-        int linear_index = 0;
-        for (q = 0;q<nmax; q++) {
-            for (r = 0; r<nmax; r++) {
-                Amatrix_linear[linear_index] = Amatrix[q][r];
-                linear_index++;
-            }
-        }
 		//	Implement SOR Solver
         MPI_Bcast(phi_new, nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Scatterv(Amatrix_linear, counts_Amatrix, displs_Amatrix, MPI_DOUBLE, my_sub_Amatrix, nmax*nmax, MPI_DOUBLE, 0, MPI_COMM_WORLD);
